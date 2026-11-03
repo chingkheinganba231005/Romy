@@ -202,6 +202,25 @@ footer { border-top: 2px solid var(--fg); margin: 64px 0 0; padding: 14px 0 50px
   </div>
 </article>
 
+<article class="chapter">
+  <a class="thumb" href="05-hunting-exoplanets/index.html"><img src="05-hunting-exoplanets/images/folded_transits_plot.png" alt="Folded transits of the planets of Kepler-90" loading="lazy"></a>
+  <div class="body">
+    <div class="chap-num">Chapter <span>5</span></div>
+    <h3><a href="05-hunting-exoplanets/index.html">Hunting Exoplanets in NASA Kepler Data</a></h3>
+    <p class="tagline">150,000 stars, four years, one question: which of these tiny dips are planets?</p>
+    <div class="badges"><span class="badge">raw telescope data</span><span class="badge nasa">NASA catalog</span>
+      <span class="badge ml">target leakage</span><span class="badge ml">ColumnTransformer</span><span class="badge ml">RandomizedSearchCV</span><span class="badge ml">precision/recall</span></div>
+    <p>Detrend a raw Kepler light curve and run an iterative transit search, then train a planet-vs-impostor classifier on 7,600 labeled signals, with a feature built from Kepler's third law. Finally, run the whole system on a star it has never seen.</p>
+    <div class="result">From raw data, the pipeline finds <b>7 of the 8 planets of Kepler-90</b> and vets all of them as real (test ROC AUC <b>0.97</b>). A detrending artifact shows why production models need guard rails.</div>
+    <div class="links">
+      <a class="btn primary" href="05-hunting-exoplanets/index.html">Read the chapter</a>
+      <a class="btn" href="05-hunting-exoplanets/animations/exoplanet_animation.html">Animation</a>
+      <a class="btn" href="05-hunting-exoplanets/exoplanet_project.ipynb">Notebook</a>
+      <a class="btn" href="05-hunting-exoplanets/README.md">README</a>
+    </div>
+  </div>
+</article>
+
 </div>
 
 <h2>What's Inside Each Chapter</h2>
