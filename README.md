@@ -15,4 +15,4 @@ Every chapter folder contains:
 * `animations/` — classroom animations that run on the exact equations and fitted parameters of the chapter,
 * `datasets/` — cached copies of the data so everything runs offline.
 
-To read a guide, open its `index.html` in a browser (or enable GitHub Pages for the repository).
+**Start here:** open the homepage [`index.html`](index.html) in a browser (or enable GitHub Pages for the repository); it links to all three chapters, their animations and notebooks.

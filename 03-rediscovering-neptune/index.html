@@ -180,6 +180,8 @@ hr.end { border: 0; border-top: 2px solid var(--fg); margin: 60px 0 10px; }
   pre.code, pre.shell { font-size: 12.8px; }
   iframe.anim { height: 520px; }
 }
+nav.toc a.toc-home { display: inline-block; font-weight: 600; font-size: 13.5px; color: var(--accent); margin-bottom: 14px; }
+nav.toc a.toc-home:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -187,6 +189,7 @@ hr.end { border: 0; border-top: 2px solid var(--fg); margin: 60px 0 10px; }
 <button class="theme-btn" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);r.setAttribute('data-theme',d?'light':'dark');})()">◐ Theme</button>
 <div class="layout">
 <nav class="toc" onclick="if(event.target.tagName==='A')this.classList.remove('open')">
+  <a class="toc-home" href="../index.html">← All chapters</a>
   <div class="toc-title">Chapter 3 · Contents</div>
   <ol>
     <li><a href="#real-data">Working with Real Data</a></li>
