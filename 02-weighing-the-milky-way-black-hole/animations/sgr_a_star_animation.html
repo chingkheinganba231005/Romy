@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sgr A* Orbits, Animated</title>
+<style>
+:root { --bg:#07080d; --panel:#121522; --fg:#e8e6e1; --muted:#9aa0b4; --accent:#ff6b81; --star:#ffd36e; --rule:#272c3d; --bh:#ff6b81; }
+* { box-sizing: border-box; }
+html, body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 "Source Sans 3","Helvetica Neue",Arial,sans-serif; }
+header { padding:10px 16px 0; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+header h1 { font-size:17px; margin:0 12px 0 0; font-weight:600; }
+.tabs { display:flex; flex-wrap:wrap; gap:6px; }
+button { background:var(--panel); color:var(--fg); border:1px solid var(--rule); border-radius:6px; padding:5px 10px; font:inherit; font-size:13.5px; cursor:pointer; }
+.tabs button.on { border-color:var(--accent); color:var(--accent); }
+.wrap { display:flex; flex-wrap:wrap; gap:12px; padding:10px 16px 16px; }
+#stage { flex:1 1 560px; min-width:0; }
+canvas { background:#04050a; border:1px solid var(--rule); border-radius:6px; width:100%; touch-action:none; display:block; }
+#side { flex:0 1 330px; min-width:260px; background:var(--panel); border:1px solid var(--rule); border-radius:6px; padding:12px 14px; }
+#side h2 { font-size:15.5px; margin:0 0 6px; color:var(--accent); }
+#side p { margin:0 0 8px; color:#cfd3df; font-size:14px; }
+.math { font-family:"Source Code Pro",Menlo,monospace; font-size:12.5px; background:#0b0d16; border:1px solid var(--rule); padding:7px 9px; border-radius:4px; margin:6px 0 10px; white-space:pre-wrap; color:#e9e3c9; }
+.ctl { display:grid; gap:8px; margin-top:8px; font-size:13.5px; }
+.ctl label { display:flex; justify-content:space-between; gap:10px; align-items:center; }
+.ctl input[type=range] { width:55%; }
+.readout { font-family:"Source Code Pro",Menlo,monospace; font-size:12.5px; color:var(--muted); white-space:pre; margin-top:8px; overflow-x:auto; }
+.row { display:flex; gap:6px; flex-wrap:wrap; }
+@media (max-width:700px) { #side { flex-basis:100%; } header h1 { font-size:15px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Stars orbiting the Milky Way's black hole: fitted orbits &amp; real data</h1>
+  <div class="tabs" id="tabs">
+    <button data-tab="sky" class="on">1 · S2 on the sky</button>
+    <button data-tab="d3">2 · The orbit in 3D</button>
+    <button data-tab="cluster">3 · The S-star cluster</button>
+    <button data-tab="weigh">4 · Weigh it yourself</button>
+  </div>
+</header>
+<div class="wrap">
+  <div id="stage"><canvas id="cv" width="900" height="640"></canvas></div>
+  <div id="side"></div>
+</div>
+<script>
+const FIT = {"s2":{"a":123.5031388042602,"e":0.881635324121223,"i":135.11011807579192,"Omega":225.85990235311837,"omega":64.2655111345609,"t_peri":2002.3225780432647,"P":16.083741824890726,"R0":8.525561080901177,"x0":0.5293337587262927,"y0":-0.3375364449103456,"vx":0.0,"vy":0.0,"vz0":30.495205174897094},"M_million":4.512619439508403,"stars":{"S1":{"a":529.0932128011573,"e":0.5193768846850789,"i":121.05923289059307,"Omega":342.28383971179886,"omega":115.74451073886354,"t_peri":2000.8967061827718,"P":142.05957193560698},"S8":{"a":496.60950223389347,"e":0.5357705724717321,"i":79.39845164570455,"Omega":130.0141241741054,"omega":206.52686449569507,"t_peri":2120.3690223290514,"P":141.87489159381283},"S9":{"a":276.0877717274161,"e":0.620761770381263,"i":83.04577784929299,"Omega":336.3430062224597,"omega":330.1692389203183,"t_peri":1923.1834342099398,"P":52.56838949320632},"S13":{"a":281.04447278646217,"e":0.4672066106637652,"i":21.953241403653095,"Omega":244.5478589241298,"omega":79.66910737799952,"t_peri":2005.1293130950564,"P":55.361844465723216},"S14":{"a":297.01861383386233,"e":0.9716763770461821,"i":98.81823759789278,"Omega":226.14852788383243,"omega":329.0802150523663,"t_peri":1999.9767912725897,"P":51.75141484548318},"S38":{"a":145.0847833462754,"e":0.7960149085326436,"i":154.2516522673209,"Omega":284.38429995611943,"omega":203.5760627110552,"t_peri":2003.1772723831073,"P":19.52979366668615},"S55":{"a":109.46529595214204,"e":0.7229649199639084,"i":148.0506790028944,"Omega":139.40731537284174,"omega":144.40285099088183,"t_peri":2009.326137114085,"P":12.644968054772882},"S2":{"a":123.5031388042602,"e":0.881635324121223,"i":135.11011807579192,"Omega":225.85990235311837,"omega":64.2655111345609,"t_peri":2002.3225780432647,"P":16.083741824890726}},"s2_astrometry":[[1992.22,-9.9,170.2,3.7,3.8],[1994.31,-33.7,177.5,3.7,2.9],[1995.53,-41.8,170.3,3.0,3.5],[1996.25,-47.6,162.2,2.9,2.6],[1996.43,-50.3,160.2,1.7,4.4],[1997.54,-63.3,128.7,2.9,2.5],[1998.37,-69.2,120.4,3.5,2.5],[1999.46,-71.2,104.2,3.7,3.5],[2000.47,-58.7,62.0,4.1,2.4],[2000.52,-67.0,56.5,2.5,2.5],[2001.5,-52.4,22.0,3.2,1.6],[2002.25,-8.1,-14.4,4.5,4.5],[2002.34,4.0,-9.7,3.0,3.0],[2002.39,13.7,-2.1,4.3,4.3],[2002.41,15.5,-0.1,3.7,3.7],[2002.41,14.7,0.2,3.7,3.7],[2002.41,14.7,1.0,3.7,3.7],[2002.49,24.9,12.9,9.0,8.4],[2002.58,28.1,18.5,3.7,3.7],[2002.66,31.4,24.7,3.6,3.6],[2002.66,31.2,25.2,3.6,3.6],[2003.21,38.6,64.5,0.4,0.4],[2003.35,39.0,72.9,0.4,0.4],[2003.36,38.3,72.7,0.4,0.4],[2003.45,38.2,77.7,0.6,0.6],[2003.45,38.9,78.3,0.5,0.5],[2003.45,39.1,78.4,0.4,0.4],[2003.45,38.5,78.5,0.4,0.4],[2003.45,38.9,79.7,0.4,0.4],[2003.55,38.6,83.2,0.4,0.4],[2003.68,38.3,89.7,0.4,0.4],[2003.68,38.8,89.5,0.7,0.7],[2003.76,37.7,94.7,0.5,0.5],[2004.24,35.0,111.1,1.0,1.0],[2004.32,34.7,114.1,0.3,0.3],[2004.35,33.9,115.5,0.4,0.4],[2004.44,33.9,118.3,0.4,0.4],[2004.51,33.0,120.6,0.4,0.4],[2004.51,33.2,121.0,0.4,0.4],[2004.52,33.4,121.0,0.5,0.5],[2004.52,33.1,121.0,0.6,0.7],[2004.57,32.2,122.7,0.4,0.4],[2004.57,32.2,121.8,0.6,0.6],[2004.66,31.5,125.1,0.3,0.3],[2004.67,31.9,125.3,0.5,0.5],[2004.73,31.1,127.2,0.3,0.3],[2004.73,31.8,126.8,0.8,0.8],[2005.27,26.0,141.0,0.4,0.4],[2005.37,25.1,143.1,0.4,0.4],[2005.37,24.7,143.3,0.4,0.4],[2005.37,24.7,143.3,0.5,0.5],[2005.47,24.3,144.9,0.4,0.4],[2005.57,23.5,146.9,0.4,0.4],[2005.58,23.0,147.3,0.4,0.4],[2006.32,15.7,159.7,0.9,0.7],[2007.54,1.3,173.6,1.0,0.8],[2007.55,2.6,173.1,0.5,0.5],[2007.69,1.0,173.9,0.6,0.6],[2007.69,0.4,173.9,0.6,0.6],[2008.15,-6.0,177.0,0.4,0.4],[2008.2,-6.5,177.0,0.4,0.4],[2008.27,-7.4,178.0,0.4,0.4],[2008.46,-9.7,178.2,0.4,0.3],[2008.47,-9.4,178.6,0.4,0.4],[2008.47,-9.0,178.2,0.5,0.5],[2008.59,-10.0,177.6,1.6,1.4],[2008.6,-11.8,178.2,0.4,0.4],[2008.71,-12.6,179.2,0.4,0.4],[2009.18,-18.4,179.1,0.8,0.8],[2009.27,-19.1,179.2,0.4,0.4],[2009.3,-19.6,179.3,0.4,0.4],[2009.3,-19.3,179.6,0.4,0.4],[2009.34,-19.4,179.2,0.4,0.4],[2009.34,-19.5,179.2,0.4,0.4],[2009.37,-19.7,179.0,0.4,0.4],[2009.5,-20.9,179.0,0.5,0.5],[2009.5,-21.2,179.2,0.4,0.4],[2009.56,-21.9,179.5,0.4,0.4],[2009.56,-21.3,179.4,0.4,0.4],[2009.61,-22.3,179.5,0.4,0.4],[2009.72,-23.9,179.1,0.4,0.4],[2009.78,-24.1,179.0,0.4,0.4],[2010.23,-29.5,177.5,0.4,0.4],[2010.24,-29.6,176.6,0.4,0.4],[2010.24,-29.0,177.1,0.4,0.4],[2010.24,-29.3,176.8,0.4,0.4],[2010.35,-30.6,176.6,0.4,0.4],[2010.44,-31.8,176.1,0.4,0.4],[2010.46,-31.8,175.9,0.4,0.4],[2010.46,-31.4,176.1,0.4,0.4],[2010.46,-31.2,175.4,0.5,0.5],[2010.46,-31.3,176.1,0.6,0.6],[2010.62,-31.8,174.4,0.4,0.4],[2010.62,-33.9,175.1,0.4,0.4],[2010.62,-33.3,175.1,0.4,0.4],[2010.62,-33.2,175.3,0.4,0.4],[2010.63,-33.5,174.9,0.4,0.4],[2010.68,-33.6,174.1,0.6,0.6],[2010.68,-34.2,174.4,0.4,0.4],[2011.24,-39.7,170.7,0.4,0.4],[2011.24,-39.7,170.6,1.9,1.9],[2011.24,-39.1,170.4,0.4,0.4],[2011.25,-39.5,170.3,0.5,0.5],[2011.31,-40.3,169.8,0.4,0.4],[2011.31,-38.9,169.9,0.5,0.5],[2011.32,-40.5,169.7,0.4,0.4],[2011.34,-40.4,169.3,0.3,0.3],[2011.44,-41.4,168.4,0.4,0.4],[2011.55,-42.5,167.6,0.6,0.6],[2011.61,-42.7,166.9,0.7,0.7],[2011.69,-44.0,166.3,0.7,0.7],[2011.7,-43.9,166.1,0.4,0.4],[2011.7,-42.8,166.2,1.0,1.0],[2011.7,-43.9,166.0,0.4,0.4],[2011.72,-44.1,165.6,0.4,0.4],[2012.2,-48.0,159.8,0.7,0.7],[2012.34,-49.6,158.4,0.4,0.4],[2012.5,-50.1,156.2,0.4,0.4],[2012.53,-51.4,156.2,0.4,0.4],[2012.54,-51.1,156.1,0.4,0.4],[2012.55,-51.7,155.8,0.4,0.4],[2012.55,-50.5,155.6,0.8,0.8],[2012.6,-51.7,155.0,1.1,1.1],[2012.7,-52.0,153.4,0.4,0.4],[2013.16,-55.3,147.1,0.4,0.4],[2013.24,-55.5,145.8,0.4,0.4],[2013.32,-56.5,144.6,0.4,0.4],[2013.37,-56.7,143.4,0.4,0.4],[2013.42,-56.7,142.7,0.5,0.5],[2013.44,-56.0,142.7,0.7,0.7],[2013.49,-57.3,140.9,0.5,0.5],[2013.5,-57.3,141.1,0.4,0.4],[2013.59,-57.9,139.5,0.4,0.4],[2013.59,-57.3,139.3,1.1,1.1],[2013.62,-58.3,139.0,0.6,0.6],[2015.43,-66.2,97.7,0.4,0.4],[2015.52,-66.7,95.3,0.4,0.4],[2015.71,-67.0,90.1,0.5,0.5],[2015.75,-66.8,88.5,0.4,0.4],[2016.22,-66.1,73.3,0.4,0.4],[2016.29,-66.0,70.8,0.5,0.5],[2016.32,-66.0,69.7,0.8,0.8],[2016.37,-66.2,68.7,0.8,0.8],[2016.52,-64.4,62.7,0.5,0.5],[2016.53,-65.1,62.7,0.5,0.5]],"s2_rv":[[2000.5,1199.0,113.0],[2002.4,-495.0,45.0],[2002.4,-530.0,51.0],[2003.3,-1571.0,59.0],[2003.4,-1512.0,40.0],[2003.4,-1428.0,51.0],[2004.5,-1055.0,46.0],[2004.5,-1056.0,37.0],[2004.6,-1039.0,39.0],[2005.2,-1001.0,77.0],[2005.2,-960.0,37.0],[2005.2,-910.0,54.0],[2005.5,-839.0,60.0],[2005.5,-907.0,43.0],[2005.7,-774.0,77.0],[2005.8,-860.0,58.0],[2006.2,-702.0,42.0],[2006.3,-718.0,77.0],[2006.6,-658.0,57.0],[2007.2,-586.0,57.0],[2007.3,-537.0,57.0],[2007.6,-505.0,57.0],[2007.7,-482.0,57.0],[2008.3,-394.0,27.0],[2008.4,-425.0,62.0],[2009.4,-241.0,45.0],[2010.4,-134.0,27.0],[2011.3,-3.0,34.0],[2011.6,35.0,57.0],[2012.2,185.0,34.0],[2012.3,167.0,34.0],[2012.5,195.0,34.0],[2012.5,186.0,34.0],[2012.7,190.0,45.0],[2013.3,313.0,23.0],[2013.7,361.0,45.0],[2013.7,384.0,34.0],[2014.2,490.0,28.0],[2014.3,515.0,34.0],[2014.5,568.0,17.0],[2015.3,765.0,23.0],[2015.7,869.0,45.0],[2016.3,1081.0,45.0],[2016.5,1198.0,34.0]]};
+const D2R = Math.PI / 180, AUYR = 4.740470463, C_KMS = 299792.458;
+
+// ---------- the same model as the notebook ----------
+function solveKepler(M, e) {
+  let E = e > 0.8 ? Math.PI : M + e * Math.sin(M);
+  for (let k = 0; k < 60; k++) E -= (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+  return E;
+}
+function orbit(p, t, R0) {            // returns [dRA, dDec, vz, X3d...]
+  const i = p.i * D2R, O = p.Omega * D2R, w = p.omega * D2R, e = p.e, a = p.a;
+  let M = 2 * Math.PI * (t - p.t_peri) / p.P; M = ((M % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+  const E = solveKepler(M, e);
+  const X = Math.cos(E) - e, Y = Math.sqrt(1 - e * e) * Math.sin(E);
+  const A = a * (Math.cos(w) * Math.cos(O) - Math.sin(w) * Math.sin(O) * Math.cos(i));
+  const B = a * (Math.cos(w) * Math.sin(O) + Math.sin(w) * Math.cos(O) * Math.cos(i));
+  const F = a * (-Math.sin(w) * Math.cos(O) - Math.cos(w) * Math.sin(O) * Math.cos(i));
+  const G = a * (-Math.sin(w) * Math.sin(O) + Math.cos(w) * Math.cos(O) * Math.cos(i));
+  const Ed = 2 * Math.PI / p.P / (1 - e * Math.cos(E));
+  const Xd = -Math.sin(E) * Ed, Yd = Math.sqrt(1 - e * e) * Math.cos(E) * Ed;
+  const Z = a * (Math.sin(w) * Math.sin(i) * X + Math.cos(w) * Math.sin(i) * Y);   // line of sight (mas)
+  const vz = a * (R0 || 8) * Math.sin(i) * (Math.sin(w) * Xd + Math.cos(w) * Yd) * AUYR;
+  const r = a * (1 - e * Math.cos(E));
+  return { ra: B * X + G * Y, dec: A * X + F * Y, z: Z, vz: vz, r: r, E: E, M: M };
+}
+const S2 = FIT.s2;
+const s2model = (t, p, R0) => {
+  const o = orbit(p || S2, t, R0 || S2.R0);
+  o.ra += S2.x0 + S2.vx * (t - 2009); o.dec += S2.y0 + S2.vy * (t - 2009); o.vz += S2.vz0; return o;
+};
+
+// ---------- canvas ----------
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let W = 900, H = 640;
+function resize() {
+  const r = cv.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
+  W = r.width; H = Math.max(380, Math.min(660, r.width * 0.75));
+  cv.style.height = H + 'px'; cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+window.addEventListener('resize', resize);
+const dot = (x, y, r, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+const text = (s, x, y, c, sz, al) => { ctx.fillStyle = c || '#e8e6e1'; ctx.font = (sz || 13) + 'px "Source Sans 3",Arial,sans-serif'; ctx.textAlign = al || 'left'; ctx.fillText(s, x, y); };
+function blackHole(x, y, s) {
+  const g = ctx.createRadialGradient(x, y, 0, x, y, 14 * s);
+  g.addColorStop(0, '#000'); g.addColorStop(0.45, '#000'); g.addColorStop(0.6, 'rgba(255,107,129,.8)'); g.addColorStop(1, 'rgba(255,107,129,0)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, 14 * s, 0, 7); ctx.fill();
+}
+let tab = 'sky', t = 1992.0, playing = true, last = performance.now(), speed = 1.0;
+const side = document.getElementById('side');
+function bind(id, f) { const el = document.getElementById(id); if (el) el.oninput = ev => f(ev.target.value); }
+function ppButton() { const b = document.getElementById('pp'); if (b) b.onclick = () => { playing = !playing; b.textContent = playing ? 'Pause' : 'Play'; }; }
+
+// ---------- tab 1: sky + RV ----------
+function sideSky() {
+  side.innerHTML = `<h2>S2 on the sky</h2>
+  <p>Dots: the <b>real measurements</b> (VLT/NTT/Keck, 1992–2016). Line: the Kepler orbit fitted in the notebook. Bottom: the radial velocity, measured from the Doppler shift.</p>
+  <div class="math">M = 2π (t − tₚ)/P;  E − e sin E = M
+ΔDec = A X + F Y,  ΔRA = B X + G Y
+M_BH = (a·R₀)³ / P²  = ${FIT.M_million.toFixed(2)} million M☉</div>
+  <div class="ctl"><label>speed <input id="sp" type="range" min="0.2" max="4" step="0.1" value="${speed}"></label>
+  <div class="row"><button id="pp">${playing ? 'Pause' : 'Play'}</button><button id="peri">Jump to 2002 pericentre</button></div></div>
+  <div class="readout" id="ro"></div>`;
+  bind('sp', v => speed = +v); ppButton();
+  document.getElementById('peri').onclick = () => { t = S2.t_peri - 0.4; };
+}
+function drawSky() {
+  const top = H * 0.64, sc = Math.min(W / 150, top / 215), cx = W / 2 + 15 * sc, cy = top * 0.12 + 180 * sc * 0.0 + 20;
+  const X = ra => cx - ra * sc, Y = de => cy + (185 - de) * sc;            // east to the left
+  ctx.strokeStyle = '#ffffff44'; ctx.beginPath();
+  for (let k = 0; k <= 800; k++) { const o = s2model(S2.t_peri - S2.P / 2 + k / 800 * S2.P); k ? ctx.lineTo(X(o.ra), Y(o.dec)) : ctx.moveTo(X(o.ra), Y(o.dec)); }
+  ctx.stroke();
+  for (const [d, x, y] of FIT.s2_astrometry) dot(X(x), Y(y), d <= t ? 2.6 : 1.3, d <= t ? '#7fd1ff' : '#7fd1ff44');
+  blackHole(X(S2.x0), Y(S2.y0), 1);
+  text('Sgr A*', X(S2.x0) + 14, Y(S2.y0) + 4, '#ff9aa9', 12);
+  const o = s2model(t);
+  ctx.strokeStyle = '#ffd36e66'; ctx.beginPath(); ctx.moveTo(X(S2.x0), Y(S2.y0)); ctx.lineTo(X(o.ra), Y(o.dec)); ctx.stroke();
+  dot(X(o.ra), Y(o.dec), 6, '#ffd36e'); text('S2', X(o.ra) + 9, Y(o.dec) - 6, '#ffd36e');
+  // 100 mas scale bar
+  ctx.strokeStyle = '#9aa0b4'; ctx.beginPath(); ctx.moveTo(20, top - 18); ctx.lineTo(20 + 100 * sc, top - 18); ctx.stroke();
+  text(`100 mas = ${(100 * S2.R0).toFixed(0)} AU`, 20, top - 24, '#9aa0b4', 11);
+  text('E ←', 20, 20, '#9aa0b4', 11); text('N ↑', 50, 20, '#9aa0b4', 11);
+  // RV panel
+  const x0 = 50, x1 = W - 14, y0 = top + 8, y1 = H - 26, t0 = 1999.5, t1 = 2019;
+  const TX = tt => x0 + (tt - t0) / (t1 - t0) * (x1 - x0), VY = v => y0 + (4200 - v) / 6400 * (y1 - y0);
+  ctx.strokeStyle = '#272c3d'; for (let v = -2000; v <= 4000; v += 2000) { ctx.beginPath(); ctx.moveTo(x0, VY(v)); ctx.lineTo(x1, VY(v)); ctx.stroke(); text(v + '', x0 - 4, VY(v) + 4, '#9aa0b4', 10, 'right'); }
+  for (let yr = 2000; yr <= 2018; yr += 2) text(String(yr), TX(yr), y1 + 16, '#9aa0b4', 10, 'center');
+  ctx.strokeStyle = '#ffffff77'; ctx.beginPath();
+  for (let k = 0; k <= 900; k++) { const tt = t0 + k / 900 * (t1 - t0); const v = s2model(tt).vz; k ? ctx.lineTo(TX(tt), VY(v)) : ctx.moveTo(TX(tt), VY(v)); }
+  ctx.stroke();
+  for (const [d, v, e] of FIT.s2_rv) { ctx.strokeStyle = '#7fd1ff88'; ctx.beginPath(); ctx.moveTo(TX(d), VY(v - e)); ctx.lineTo(TX(d), VY(v + e)); ctx.stroke(); dot(TX(d), VY(v), 2.2, '#7fd1ff'); }
+  if (t >= t0) dot(TX(t), VY(o.vz), 5, '#ffd36e');
+  text('radial velocity (km/s)', x0 + 6, y0 + 12, '#9aa0b4', 11);
+  const rAU = o.r * S2.R0, ra = (o.ra - S2.x0), de = (o.dec - S2.y0);
+  const v3 = Math.sqrt(FIT.M_million * 1e6 * 39.478 * (2 / rAU - 1 / (S2.a * S2.R0))) * AUYR;
+  document.getElementById('ro').textContent =
+    `year            ${t.toFixed(3)}\ndistance to BH  ${rAU.toFixed(0)} AU\n3D speed        ${v3.toFixed(0)} km/s (${(100 * v3 / C_KMS).toFixed(2)}% c)\nradial velocity ${o.vz.toFixed(0)} km/s`;
+}
+
+// ---------- tab 2: 3D ----------
+let yaw = 0.75, pitch = 0.45, dragging = false, lastXY = null;
+cv.addEventListener('pointerdown', e => { dragging = true; lastXY = [e.clientX, e.clientY]; });
+window.addEventListener('pointerup', () => dragging = false);
+cv.addEventListener('pointermove', e => { if (!dragging || tab !== 'd3') return; yaw += (e.clientX - lastXY[0]) * 0.01; pitch += (e.clientY - lastXY[1]) * 0.01; lastXY = [e.clientX, e.clientY]; });
+function side3d() {
+  side.innerHTML = `<h2>The orbit in 3D</h2>
+  <p><b>Drag</b> to rotate. Press "Our view" to look along the line of sight, exactly as the telescope does. The blue grid is the plane of the sky. The orbit is tilted by i = ${S2.i.toFixed(1)}°, so its projection is a different ellipse, and the black hole is <b>not</b> at the focus of the projected ellipse.</p>
+  <div class="math">(x, y, z) = R_z(Ω) R_x(i) R_z(ω) · a (cos E − e, √(1−e²) sin E, 0)</div>
+  <div class="ctl"><div class="row"><button id="view">Our view (line of sight)</button><button id="face">Face-on view of the orbit</button><button id="pp">${playing ? 'Pause' : 'Play'}</button></div>
+  <label>speed <input id="sp" type="range" min="0.2" max="4" step="0.1" value="${speed}"></label></div><div class="readout" id="ro"></div>`;
+  bind('sp', v => speed = +v); ppButton();
+  document.getElementById('view').onclick = () => { yaw = 0; pitch = 0; };
+  document.getElementById('face').onclick = () => { yaw = 0; pitch = -S2.i * D2R; };
+}
+function rot(v) {           // v = [east, north, toward observer]; camera rotation
+  let [x, y, z] = v;
+  const cy = Math.cos(yaw), sy = Math.sin(yaw); [x, z] = [cy * x + sy * z, -sy * x + cy * z];
+  const cp = Math.cos(pitch), sp = Math.sin(pitch); [y, z] = [cp * y - sp * z, sp * y + cp * z];
+  return [x, y, z];
+}
+function pos3(tt) { const o = orbit(S2, tt, S2.R0); return [-o.ra, o.dec, -o.z]; }   // screen x = east-left
+function draw3d() {
+  const sc = Math.min(W, H) / 330, cx = W / 2, cy = H / 2 + 60 * sc;
+  const P = v => { const r = rot(v); return [cx + r[0] * sc, cy - r[1] * sc]; };
+  ctx.strokeStyle = '#3a6cff33';
+  for (let g = -150; g <= 150; g += 30) {
+    let a = P([g, -150, 0]), b = P([g, 150, 0]); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
+    a = P([-150, g, 0]); b = P([150, g, 0]); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
+  }
+  // line of sight
+  ctx.strokeStyle = '#ffffff44'; ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(...P([0, 0, 0])); ctx.lineTo(...P([0, 0, 200])); ctx.stroke(); ctx.setLineDash([]);
+  const q = P([0, 0, 200]); text('to Earth', q[0] + 6, q[1], '#9aa0b4', 11);
+  // orbit, projection on sky plane
+  ctx.strokeStyle = '#7fd1ff66'; ctx.beginPath();
+  for (let k = 0; k <= 400; k++) { const v = pos3(S2.t_peri + k / 400 * S2.P); const p = P([v[0], v[1], 0]); k ? ctx.lineTo(...p) : ctx.moveTo(...p); } ctx.stroke();
+  ctx.strokeStyle = '#ffd36e'; ctx.lineWidth = 1.6; ctx.beginPath();
+  for (let k = 0; k <= 400; k++) { const p = P(pos3(S2.t_peri + k / 400 * S2.P)); k ? ctx.lineTo(...p) : ctx.moveTo(...p); } ctx.stroke(); ctx.lineWidth = 1;
+  const c = P([0, 0, 0]); blackHole(c[0], c[1], 0.9);
+  const v = pos3(t), s = P(v), sp = P([v[0], v[1], 0]);
+  ctx.strokeStyle = '#ffffff55'; ctx.beginPath(); ctx.moveTo(...s); ctx.lineTo(...sp); ctx.stroke();
+  dot(sp[0], sp[1], 3, '#7fd1ff'); dot(s[0], s[1], 6, '#ffd36e');
+  document.getElementById('ro').textContent = `year ${t.toFixed(2)}\nyellow: true orbit   blue: as seen on the sky\nline-of-sight offset ${(-v[2] * S2.R0).toFixed(0)} AU`;
+}
+
+// ---------- tab 3: cluster ----------
+function sideCluster() {
+  side.innerHTML = `<h2>The S-star cluster</h2>
+  <p>Every star below moves on the orbit fitted <b>independently</b> to its own positions in the notebook. All of them turn around the same invisible point, and all obey Kepler's third law with the same a³/P².</p>
+  <div class="ctl"><label>speed <input id="sp" type="range" min="0.5" max="40" step="0.5" value="${Math.max(speed, 5)}"></label>
+  <div class="row"><button id="pp">${playing ? 'Pause' : 'Play'}</button></div></div><div class="readout" id="ro"></div>`;
+  speed = Math.max(speed, 5); bind('sp', v => speed = +v); ppButton();
+}
+const COLS = ['#ffd36e', '#7fd1ff', '#ff9aa9', '#9be38b', '#c79bff', '#ffb366', '#6fe3d6', '#f0f0f0'];
+function drawCluster() {
+  const stars = Object.entries(FIT.stars);
+  let rmax = 0; for (const [, p] of stars) rmax = Math.max(rmax, p.a * (1 + p.e));
+  const sc = Math.min(W, H) / (2.15 * rmax), cx = W / 2, cy = H / 2;
+  let lines = '';
+  stars.forEach(([name, p], k) => {
+    const col = COLS[k % COLS.length];
+    ctx.strokeStyle = col + '55'; ctx.beginPath();
+    for (let j = 0; j <= 300; j++) { const o = orbit(p, p.t_peri + j / 300 * p.P, 8); j ? ctx.lineTo(cx - o.ra * sc, cy - o.dec * sc) : ctx.moveTo(cx - o.ra * sc, cy - o.dec * sc); }
+    ctx.stroke();
+    const o = orbit(p, t, 8); dot(cx - o.ra * sc, cy - o.dec * sc, 4.5, col); text(name, cx - o.ra * sc + 7, cy - o.dec * sc - 5, col, 11.5);
+    lines += `${name.padEnd(4)} P=${p.P.toFixed(1).padStart(6)} yr  a³/P²=${(p.a ** 3 / p.P ** 2).toFixed(0)}\n`;
+  });
+  blackHole(cx, cy, 0.8);
+  document.getElementById('ro').textContent = `year ${t.toFixed(1)}\n` + lines;
+}
+
+// ---------- tab 4: weigh it yourself ----------
+const WEIGH = { M: 3.0, R0: 7.0 };
+function sideWeigh() {
+  side.innerHTML = `<h2>Weigh it yourself</h2>
+  <p>Change the mass and the distance. The <b>angular</b> size of the orbit, its shape and its orientation stay fixed. Kepler's third law then sets the period, and the distance converts mas/yr into km/s. Try to bring χ²/N close to 1!</p>
+  <div class="math">P = √((a·R₀)³ / M)
+v_z ∝ a · R₀ / P</div>
+  <div class="ctl"><label>mass (million M☉) <input id="m" type="range" min="2" max="7" step="0.01" value="${WEIGH.M}"></label>
+  <label>distance R₀ (kpc) <input id="r" type="range" min="6" max="10.5" step="0.01" value="${WEIGH.R0}"></label>
+  <div class="row"><button id="best">Show the fitted answer</button></div></div><div class="readout" id="ro"></div>`;
+  bind('m', v => WEIGH.M = +v); bind('r', v => WEIGH.R0 = +v);
+  document.getElementById('best').onclick = () => { WEIGH.M = FIT.M_million; WEIGH.R0 = S2.R0; document.getElementById('m').value = WEIGH.M; document.getElementById('r').value = WEIGH.R0; };
+}
+function drawWeigh() {
+  const P = Math.sqrt(Math.pow(S2.a * WEIGH.R0, 3) / (WEIGH.M * 1e6));
+  const p = Object.assign({}, S2, { P: P });
+  const model = tt => { const o = orbit(p, tt, WEIGH.R0); return { ra: o.ra + S2.x0, dec: o.dec + S2.y0, vz: o.vz + S2.vz0 }; };
+  let chi = 0, n = 0;
+  for (const [d, x, y, ex, ey] of FIT.s2_astrometry) { const o = model(d); chi += ((x - o.ra) / ex) ** 2 + ((y - o.dec) / ey) ** 2; n += 2; }
+  for (const [d, v, e] of FIT.s2_rv) { chi += ((v - model(d).vz) / e) ** 2; n += 1; }
+  const half = W / 2;
+  // left: dec vs time, right: rv vs time
+  const panels = [[10, half - 6, 'ΔDec (mas)', -40, 200, o => o.dec, FIT.s2_astrometry.map(r => [r[0], r[2], r[4]])],
+                  [half + 6, W - 10, 'radial velocity (km/s)', -2200, 2200, o => o.vz, FIT.s2_rv]];
+  for (const [xa, xb, lab, lo, hi, f, data] of panels) {
+    const t0 = 1992, t1 = 2017, X = tt => xa + 30 + (tt - t0) / (t1 - t0) * (xb - xa - 30), Y = v => 30 + (hi - v) / (hi - lo) * (H - 70);
+    ctx.strokeStyle = '#272c3d'; ctx.strokeRect(xa + 30, 30, xb - xa - 30, H - 70);
+    text(lab, xa + 36, 46, '#9aa0b4', 12);
+    for (let yr = 1995; yr <= 2015; yr += 5) text(String(yr), X(yr), H - 22, '#9aa0b4', 10, 'center');
+    for (const [d, v, e] of data) { ctx.strokeStyle = '#7fd1ff77'; ctx.beginPath(); ctx.moveTo(X(d), Y(v - e)); ctx.lineTo(X(d), Y(v + e)); ctx.stroke(); dot(X(d), Y(v), 2.2, '#7fd1ff'); }
+    ctx.strokeStyle = '#ffd36e'; ctx.beginPath();
+    for (let k = 0; k <= 700; k++) { const tt = t0 + k / 700 * (t1 - t0); let yv = Y(f(model(tt))); yv = Math.max(20, Math.min(H - 30, yv)); k ? ctx.lineTo(X(tt), yv) : ctx.moveTo(X(tt), yv); }
+    ctx.stroke();
+  }
+  document.getElementById('ro').textContent = `period P   = ${P.toFixed(2)} yr\nM / R0³    = ${(WEIGH.M * 1e6 / WEIGH.R0 ** 3).toFixed(0)} M☉/kpc³\nχ² / N     = ${(chi / n).toFixed(2)}\n(fitted: M = ${FIT.M_million.toFixed(2)}, R0 = ${S2.R0.toFixed(2)})`;
+}
+
+// ---------- loop ----------
+const sides = { sky: sideSky, d3: side3d, cluster: sideCluster, weigh: sideWeigh };
+const draws = { sky: drawSky, d3: draw3d, cluster: drawCluster, weigh: drawWeigh };
+document.getElementById('tabs').onclick = ev => {
+  const b = ev.target.closest('button'); if (!b) return;
+  tab = b.dataset.tab; document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('on', x === b));
+  if (tab !== 'cluster' && speed > 4) speed = 1;
+  sides[tab]();
+};
+function frame(now) {
+  const dt = Math.min(now - last, 60) / 1000; last = now;
+  if (playing && tab !== 'weigh') {
+    // slow down near pericentre so the swing is visible
+    const o = orbit(S2, t, S2.R0), slow = tab === 'cluster' ? 1 : Math.min(1, Math.max(0.06, o.r / (S2.a * 0.6)));
+    t += dt * speed * 0.8 * slow;
+    if (tab !== 'cluster' && t > 2019) t = 1992;
+  }
+  ctx.clearRect(0, 0, W, H);
+  draws[tab]();
+  requestAnimationFrame(frame);
+}
+resize(); sideSky(); requestAnimationFrame(frame);
+</script>
+</body>
+</html>
