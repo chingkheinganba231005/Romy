@@ -1,0 +1,1732 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hunting Exoplanets</title>
+<meta name="chapter" content="5">
+<meta name="description" content="An end-to-end machine learning project: find the planets of Kepler-90 in raw NASA Kepler light curves with a transit search, and build a classifier that tells real planets from false positives.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Source+Sans+3:wght@300;400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+<style>/* Book-style layout for the end-to-end project guides */
+:root {
+  --bg: #fdfcf9;
+  --fg: #1d1d1f;
+  --muted: #5d5d66;
+  --rule: #d9d6cf;
+  --accent: #a3122a;          /* chapter red */
+  --accent-soft: #f6e8ea;
+  --code-bg: #f3f2ee;
+  --code-fg: #1d1d1f;
+  --out-bg: #ffffff;
+  --side-bg: #f1efe9;
+  --note: #2f5d8a;
+  --tip: #2f7a4f;
+  --warn: #a3122a;
+  --link: #1f5f99;
+  --toc-bg: #f6f4ef;
+  --tbl-stripe: #f5f3ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181b; --fg: #e8e6e1; --muted: #a3a3ab; --rule: #34353a;
+    --accent: #ff6b81; --accent-soft: #3a2228; --code-bg: #212226; --code-fg: #e8e6e1;
+    --out-bg: #1b1c20; --side-bg: #222328; --note: #7fb2e5; --tip: #78c99a; --warn: #ff6b81;
+    --link: #8cc0f2; --toc-bg: #1c1d21; --tbl-stripe: #1f2024;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181b; --fg: #e8e6e1; --muted: #a3a3ab; --rule: #34353a;
+  --accent: #ff6b81; --accent-soft: #3a2228; --code-bg: #212226; --code-fg: #e8e6e1;
+  --out-bg: #1b1c20; --side-bg: #222328; --note: #7fb2e5; --tip: #78c99a; --warn: #ff6b81;
+  --link: #8cc0f2; --toc-bg: #1c1d21; --tbl-stripe: #1f2024;
+}
+* { box-sizing: border-box; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  font-size: 18px; line-height: 1.62;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--link); }
+.layout { display: flex; max-width: 1280px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto;
+  width: 290px; flex: 0 0 290px; padding: 28px 18px 40px 22px; background: var(--toc-bg);
+  border-right: 1px solid var(--rule);
+  font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif; font-size: 14.5px; line-height: 1.4;
+}
+nav.toc .toc-title { font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; color: var(--accent); margin-bottom: 10px; }
+nav.toc ol { list-style: none; padding-left: 0; margin: 0; }
+nav.toc ol ol { padding-left: 14px; margin: 3px 0 8px; }
+nav.toc li { margin: 4px 0; }
+nav.toc a { color: var(--fg); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); }
+nav.toc ol ol a { color: var(--muted); }
+main { flex: 1 1 auto; min-width: 0; padding: 40px 56px 120px; max-width: 920px; }
+.theme-btn {
+  position: fixed; right: 16px; top: 12px; z-index: 5; font: 13px "Source Sans 3", Arial, sans-serif;
+  background: var(--side-bg); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 10px; cursor: pointer;
+}
+.toc-btn { display: none; }
+
+/* chapter opener */
+.chapter-opener { border-bottom: 2px solid var(--fg); padding-bottom: 18px; margin-bottom: 30px; }
+.chapter-label { font-family: "Source Sans 3", Arial, sans-serif; text-transform: uppercase; letter-spacing: .25em; color: var(--accent); font-weight: 700; font-size: 15px; text-align: right; }
+.chapter-number { font-family: "Source Sans 3", Arial, sans-serif; font-size: 84px; line-height: 1; font-weight: 300; text-align: right; color: var(--accent); }
+h1.chapter-title { font-family: "Source Sans 3", Arial, sans-serif; font-size: 44px; line-height: 1.12; margin: 8px 0 0; text-align: right; font-weight: 600; }
+.chapter-sub { text-align: right; color: var(--muted); font-style: italic; margin-top: 6px; }
+h2, h3, h4 { font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif; line-height: 1.25; }
+h2 { font-size: 31px; margin: 64px 0 14px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); font-weight: 600; }
+h3 { font-size: 23px; margin: 40px 0 10px; font-weight: 600; }
+h4 { font-size: 18.5px; margin: 28px 0 8px; font-weight: 700; }
+p { margin: 0 0 16px; }
+em.term, .term { font-style: italic; }
+ol.steps li, ul li { margin: 4px 0; }
+
+/* code */
+pre, code, kbd { font-family: "Source Code Pro", "SFMono-Regular", Menlo, Consolas, monospace; }
+p code, li code, td code { font-size: .86em; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+pre.code, pre.shell {
+  background: var(--code-bg); color: var(--code-fg); padding: 14px 16px; border-radius: 4px; overflow-x: auto;
+  font-size: 14.2px; line-height: 1.5; margin: 14px 0 6px; border-left: 3px solid var(--rule);
+}
+pre.output {
+  background: var(--out-bg); border: 1px dashed var(--rule); padding: 10px 14px; overflow-x: auto;
+  font-size: 13.6px; line-height: 1.45; margin: 4px 0 18px; color: var(--fg);
+}
+pre.output::before { content: "Output"; display: block; font: 600 10.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.dataframe-wrap { overflow-x: auto; margin: 6px 0 18px; }
+table { border-collapse: collapse; font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; }
+table.dataframe th, table.dataframe td, table.data th, table.data td { padding: 4px 10px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+table.dataframe tbody tr:nth-child(odd), table.data tbody tr:nth-child(odd) { background: var(--tbl-stripe); }
+table.data { margin: 10px 0 20px; width: 100%; }
+table.data th, table.data td { text-align: left; white-space: normal; vertical-align: top; }
+.table-caption { font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; margin-top: 18px; }
+.table-caption b { color: var(--accent); }
+
+/* pygments (default-ish, readable in both themes) */
+.k, .kn, .kd, .kc, .ow { color: #8a2be2; font-weight: 600; }
+.s, .s1, .s2, .sa, .sd, .si, .se { color: #2f7a4f; }
+.mi, .mf, .mh, .il { color: #b35c00; }
+.c, .c1, .cm { color: #7a7a85; font-style: italic; }
+.nf, .nc { color: #1f5f99; }
+.nb, .bp { color: #0e7c86; }
+.o { color: inherit; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .k, :root:not([data-theme="light"]) .kn, :root:not([data-theme="light"]) .kd, :root:not([data-theme="light"]) .kc, :root:not([data-theme="light"]) .ow { color: #c79bff; }
+  :root:not([data-theme="light"]) .s, :root:not([data-theme="light"]) .s1, :root:not([data-theme="light"]) .s2, :root:not([data-theme="light"]) .sa, :root:not([data-theme="light"]) .sd, :root:not([data-theme="light"]) .si { color: #8fd6a8; }
+  :root:not([data-theme="light"]) .mi, :root:not([data-theme="light"]) .mf { color: #ffb366; }
+  :root:not([data-theme="light"]) .nf, :root:not([data-theme="light"]) .nc { color: #8cc0f2; }
+  :root:not([data-theme="light"]) .nb, :root:not([data-theme="light"]) .bp { color: #6fd3dc; } }
+:root[data-theme="dark"] .k, :root[data-theme="dark"] .kn, :root[data-theme="dark"] .kd, :root[data-theme="dark"] .kc, :root[data-theme="dark"] .ow { color: #c79bff; }
+:root[data-theme="dark"] .s, :root[data-theme="dark"] .s1, :root[data-theme="dark"] .s2, :root[data-theme="dark"] .sa, :root[data-theme="dark"] .sd, :root[data-theme="dark"] .si { color: #8fd6a8; }
+:root[data-theme="dark"] .mi, :root[data-theme="dark"] .mf { color: #ffb366; }
+:root[data-theme="dark"] .nf, :root[data-theme="dark"] .nc { color: #8cc0f2; }
+:root[data-theme="dark"] .nb, :root[data-theme="dark"] .bp { color: #6fd3dc; }
+
+/* admonitions: tip / note / warning, like the book's margin animals */
+.admon { display: flex; gap: 14px; margin: 22px 0; padding: 12px 16px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-size: 16.5px; }
+.admon .icon { flex: 0 0 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0; color: #fff; margin-top: 3px; }
+.admon .icon::after { font: 700 11.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .06em; }
+.admon.tip .icon::after { content: "TIP"; }
+.admon.note .icon::after { content: "NOTE"; }
+.admon.warning .icon::after { content: "!"; font-size: 24px; }
+.admon.tip .icon { background: var(--tip); }
+.admon.note .icon { background: var(--note); }
+.admon.warning .icon { background: var(--warn); }
+.admon .body p:last-child { margin-bottom: 0; }
+.admon .body { min-width: 0; }
+
+/* sidebars (boxed asides with a title) */
+aside.sidebar { background: var(--side-bg); border: 1px solid var(--rule); padding: 16px 22px 8px; margin: 26px 0; font-size: 16.5px; border-radius: 3px; }
+aside.sidebar h5 { font-family: "Source Sans 3", Arial, sans-serif; font-size: 18px; text-align: center; margin: 0 0 10px; }
+
+/* figures & equations */
+figure { margin: 26px 0; text-align: center; }
+figure img { max-width: 100%; height: auto; border-radius: 2px; background: #fff; }
+figcaption, .eq-caption { font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; color: var(--fg); margin-top: 8px; text-align: left; }
+figcaption b, .eq-caption b { color: var(--accent); }
+.equation { margin: 22px 0; padding: 4px 0 8px; overflow-x: auto; }
+.equation .eq-caption { margin-bottom: 6px; }
+.katex-display { margin: .4em 0 !important; }
+.footnotes { font-size: 14.5px; border-top: 1px solid var(--rule); margin-top: 60px; padding-top: 10px; color: var(--muted); }
+sup.fn a { text-decoration: none; }
+.callout-list { counter-reset: c; }
+.checklist li::marker { color: var(--accent); font-weight: 700; }
+.exercise li { margin-bottom: 10px; }
+.big-picture { font-family: "Source Sans 3", Arial, sans-serif; }
+iframe.anim { width: 100%; height: 620px; border: 1px solid var(--rule); border-radius: 4px; background: #0b0d14; }
+.data-badge { display: inline-block; font: 700 11.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; color: #fff; background: var(--tip); vertical-align: middle; }
+.data-badge.nasa { background: var(--note); }
+.data-badge.sim { background: var(--warn); }
+hr.end { border: 0; border-top: 2px solid var(--fg); margin: 60px 0 10px; }
+
+@media (max-width: 980px) {
+  nav.toc { position: fixed; left: 0; top: 0; z-index: 10; transform: translateX(-100%); transition: transform .2s; box-shadow: 0 0 30px rgba(0,0,0,.25); }
+  nav.toc.open { transform: none; }
+  .toc-btn { display: block; position: fixed; left: 16px; top: 12px; z-index: 11; font: 13px "Source Sans 3", Arial, sans-serif; background: var(--side-bg); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  main { padding: 60px 16px 80px; }
+  body { font-size: 17px; }
+  h1.chapter-title { font-size: 32px; }
+  .chapter-number { font-size: 60px; }
+  h2 { font-size: 25px; }
+  h3 { font-size: 20px; }
+  pre.code, pre.shell { font-size: 12.8px; }
+  iframe.anim { height: 520px; }
+}
+nav.toc a.toc-home { display: inline-block; font-weight: 600; font-size: 13.5px; color: var(--accent); margin-bottom: 14px; }
+nav.toc a.toc-home:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<button class="toc-btn" onclick="document.querySelector('nav.toc').classList.toggle('open')">☰ Contents</button>
+<button class="theme-btn" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);r.setAttribute('data-theme',d?'light':'dark');})()">◐ Theme</button>
+<div class="layout">
+<nav class="toc" onclick="if(event.target.tagName==='A')this.classList.remove('open')">
+  <a class="toc-home" href="../index.html">← All chapters</a>
+  <div class="toc-title">Chapter 5 · Contents</div>
+  <ol>
+    <li><a href="#real-data">Working with Real Data</a></li>
+    <li><a href="#big-picture">Look at the Big Picture</a>
+      <ol><li><a href="#crash-course">A Crash Course in Transits</a></li><li><a href="#frame">Frame the Problem</a></li><li><a href="#measure">Select a Performance Measure</a></li><li><a href="#assumptions">Check the Assumptions</a></li></ol></li>
+    <li><a href="#get-data">Get the Data</a>
+      <ol><li><a href="#download">Download the Data</a></li><li><a href="#quick-look">Take a Quick Look at the Data Structure</a></li><li><a href="#test-set">Create a Test Set</a></li></ol></li>
+    <li><a href="#discover">Discover and Visualize the Data to Gain Insights</a>
+      <ol><li><a href="#viz-lc">Looking at a Light Curve</a></li><li><a href="#viz-koi">Visualizing the Planet Catalog</a></li><li><a href="#correlations">Looking for Correlations</a></li><li><a href="#combinations">Experimenting with Attribute Combinations</a></li></ol></li>
+    <li><a href="#prepare">Prepare the Data for Machine Learning Algorithms</a>
+      <ol><li><a href="#detrend">Cleaning a Light Curve</a></li><li><a href="#pipelines">Transformation Pipelines</a></li></ol></li>
+    <li><a href="#train">Select and Train a Model</a>
+      <ol><li><a href="#leakage">A Warning About Leakage</a></li><li><a href="#training">Training and Evaluating</a></li></ol></li>
+    <li><a href="#tune">Fine-Tune Your Model</a>
+      <ol><li><a href="#random">Randomized Search</a></li><li><a href="#analyze">Analyze the Best Model</a></li><li><a href="#test">Evaluate on the Test Set</a></li></ol></li>
+    <li><a href="#launch">Launch: Hunt for Planets</a>
+      <ol><li><a href="#bls">The Transit Search</a></li><li><a href="#vetting">Vetting the Detections</a></li></ol></li>
+    <li><a href="#monitor">Monitor and Maintain</a></li>
+    <li><a href="#try">Try It Out!</a></li>
+    <li><a href="#exercises">Exercises</a></li>
+  </ol>
+</nav>
+<main>
+
+<div class="chapter-opener">
+  <div class="chapter-label">Chapter</div>
+  <div class="chapter-number">5</div>
+  <h1 class="chapter-title">Hunting Exoplanets in<br>NASA Kepler Data</h1>
+  <div class="chapter-sub">an end-to-end Machine Learning project with raw light curves and the full Kepler catalog</div>
+</div>
+
+<p>In this chapter you will go through a fifth project end to end, pretending to be a data scientist on NASA's Kepler mission. For four years, the Kepler space telescope stared at one patch of sky in the constellations Cygnus and Lyra. It measured the brightness of about 150,000 stars every 30 minutes, looking for the tiny, regular dimming caused by a planet passing in front of its star. Your job has two parts. First, build a search that finds those dimmings in raw data. Then build a classifier that decides which detections are real planets and which are impostors.<sup class="fn"><a href="#fn1" id="r1">1</a></sup> The main steps are the usual ones:</p>
+<ol class="steps">
+  <li>Look at the big picture.</li><li>Get the data.</li><li>Discover and visualize the data to gain insights.</li><li>Prepare the data for Machine Learning algorithms.</li><li>Select a model and train it.</li><li>Fine-tune your model.</li><li>Present your solution.</li><li>Launch, monitor, and maintain your system.</li>
+</ol>
+<p>This chapter is the closest of the series to classic ML. Its core is a <em>binary classifier</em> on a table of about 7,600 labeled examples, with all the tools of the trade: pipelines, imputation, feature engineering, randomized search, ROC curves and precision/recall trade-offs. But the "launch" is real astronomy. We'll run the full system on the star Kepler-90, which has <em>eight</em> known planets, as many as our Sun. Then we'll see how many our pipeline can find on its own.</p>
+
+<h2 id="real-data">Working with Real Data</h2>
+<table class="data">
+<thead><tr><th>Dataset</th><th>Kind</th><th>Content</th></tr></thead>
+<tbody>
+<tr><td>Kepler long-cadence light curves of Kepler-90 (KIC 11442793), from NASA's MAST archive</td><td><span class="data-badge">raw telescope data</span></td><td>54,400 brightness measurements over 4 years (14 quarters), raw (SAP) and systematics-corrected (PDCSAP) flux</td></tr>
+<tr><td>Kepler Objects of Interest (KOI) cumulative table, NASA Exoplanet Archive</td><td><span class="data-badge nasa">NASA catalog</span></td><td>9,564 transit-like signals with their properties and dispositions: confirmed planet, false positive, or still a candidate</td></tr>
+</tbody></table>
+<div class="admon note"><div class="icon">Note</div><div class="body"><p>The notebook <code>exoplanet_project.ipynb</code> runs in about 3 minutes. It caches the light curve as a CSV in <code>datasets/kepler/</code>, so it runs offline. Downloading from MAST again needs the <code>astroquery</code> and <code>astropy</code> packages.</p></div></div>
+
+<h2 id="big-picture">Look at the Big Picture</h2>
+<aside class="sidebar" id="crash-course"><h5>A Crash Course in Transits</h5>
+<p><b>Exoplanets.</b> Planets around other stars are far too faint to see directly next to their star, which is a billion times brighter. But they betray themselves. When a planet's orbit is aligned edge-on with our line of sight, the planet passes in front of the star once per orbit. This is a <em>transit</em>, and the star dims slightly.</p>
+<p><b>How much?</b> The planet blocks a fraction of the star's disk equal to the ratio of their areas:</p>
+<div class="equation"><div class="eq-caption"><b>Equation 5-1.</b> Transit depth</div>
+$$\delta \approx \left(\frac{R_p}{R_\star}\right)^2$$</div>
+<p>Jupiter crossing the Sun dims it by 1%. The Earth dims it by only 84 parts per million (ppm). Kepler's precision per half-hour was around 100–300 ppm for its typical stars, so Earth-sized planets can only be found by stacking many transits.</p>
+<p><b>How long?</b> For a circular orbit, the transit lasts as long as the planet takes to cross the star's diameter. With Kepler's third law (Chapter 1), that depends only on the period and the star's <em>density</em>:</p>
+<div class="equation"><div class="eq-caption"><b>Equation 5-2.</b> Transit duration for a central transit</div>
+$$T \approx 13\ \text{h} \times \left(\frac{P}{1\ \text{yr}}\right)^{1/3}\left(\frac{\rho_\star}{\rho_\odot}\right)^{-1/3}$$</div>
+<p><b>Light curves.</b> A <em>light curve</em> is a star's brightness as a function of time. Transits appear as box-shaped (more precisely, U-shaped) dips that repeat with the orbital period.</p>
+<p><b>Impostors.</b> Many things mimic a transit. An <em>eclipsing binary</em> is two stars eclipsing each other (deep dips, V-shaped, often unequal "odd/even" depths). A <em>blended</em> eclipsing binary is a background binary star whose light mixes with the target's, which dilutes its eclipse into a shallow, planet-like dip. Stellar spots, instrumental glitches and cosmic rays add to the list. More than half of Kepler's signals turned out to be false positives. That's why <em>vetting</em> matters.</p>
+</aside>
+
+<h3 id="frame">Frame the Problem</h3>
+<p>Our system has two components, in a pipeline. The first is a <em>detector</em>: given a light curve, find periodic dips. That's a search problem, more like unsupervised anomaly detection than classic ML. The second is a <em>vetter</em>: given a detected signal and its host star, estimate the probability that it is a planet. That one is <em>supervised binary classification</em>, trained on the KOIs that astronomers already confirmed or rejected, mostly by expensive follow-up observations. It's batch learning on a tabular dataset of a few thousand rows.</p>
+<p>The downstream use matters for how we evaluate it. Follow-up time on large telescopes is scarce. If the vetter says "planet", we want it to be right (high <em>precision</em>), while still catching most of the planets (high <em>recall</em>).</p>
+
+<h3 id="measure">Select a Performance Measure</h3>
+<p>Accuracy is a poor guide when classes are imbalanced and errors have different costs. We'll use the <em>ROC AUC</em>: the probability that a randomly chosen planet is ranked above a randomly chosen false positive. It's 0.5 for random guessing and 1 for perfect ranking, and it doesn't depend on any threshold. Then we'll choose a decision threshold from the <em>precision</em> and <em>recall</em> curves:</p>
+<div class="equation"><div class="eq-caption"><b>Equation 5-3.</b> Precision and recall</div>
+$$\text{precision} = \frac{TP}{TP + FP}, \qquad \text{recall} = \frac{TP}{TP + FN}$$</div>
+
+<h3 id="assumptions">Check the Assumptions</h3>
+<ul>
+<li><b>The labels are right.</b> "Confirmed" and "false positive" are the best current knowledge, and a few are surely wrong. Labels can change: dispositions are updated as follow-up arrives.</li>
+<li><b>The training set represents the future.</b> KOIs were found by NASA's own pipeline. Our detector is different. If our features are computed differently from the catalog's, the classifier will see different inputs in production than in training (<em>training/serving skew</em>). We'll check.</li>
+<li><b>Planets in the same system are not independent.</b> They share their star's properties, which matters for splitting.</li>
+</ul>
+
+<h2 id="get-data">Get the Data</h2>
+<p><code>pip install -U jupyter numpy pandas matplotlib scipy scikit-learn astropy astroquery</code>.</p>
+<pre class="code"><code><span class="c1"># Python ≥3.8 is required</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="k">assert</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+
+<span class="c1"># Scikit-Learn ≥1.0 is required</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sklearn</span>
+<span class="k">assert</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&gt;=</span> <span class="s2">"1.0"</span>
+
+<span class="c1"># Common imports</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="c1"># To make this notebook's output stable across runs</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+
+<span class="c1"># To plot pretty figures</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpl</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'axes'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'xtick'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'ytick'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+
+<span class="c1"># Where to save the figures</span>
+<span class="n">PROJECT_ROOT_DIR</span> <span class="o">=</span> <span class="s2">"."</span>
+<span class="n">IMAGES_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">PROJECT_ROOT_DIR</span><span class="p">,</span> <span class="s2">"images"</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">IMAGES_PATH</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">save_fig</span><span class="p">(</span><span class="n">fig_id</span><span class="p">,</span> <span class="n">tight_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fig_extension</span><span class="o">=</span><span class="s2">"png"</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mi">150</span><span class="p">):</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">IMAGES_PATH</span><span class="p">,</span> <span class="n">fig_id</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="n">fig_extension</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Saving figure"</span><span class="p">,</span> <span class="n">fig_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tight_layout</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">fig_extension</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">resolution</span><span class="p">)</span>
+</code></pre>
+<h3 id="download">Download the Data</h3>
+<p>Kepler data live at the Mikulski Archive for Space Telescopes (MAST). <code>astroquery</code> finds all the long-cadence light-curve files of a star, and <code>astropy</code> reads them (they are FITS files, the standard astronomy format). We keep the useful columns and cache them as a CSV:</p>
+<pre class="code"><code><span class="n">DATASETS_PATH</span> <span class="o">=</span> <span class="s2">"datasets"</span>
+<span class="n">KEPLER90_KIC</span> <span class="o">=</span> <span class="mi">11442793</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_kepler_light_curve</span><span class="p">(</span><span class="n">kic</span><span class="o">=</span><span class="n">KEPLER90_KIC</span><span class="p">,</span> <span class="n">path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATASETS_PATH</span><span class="p">,</span> <span class="s2">"kepler"</span><span class="p">)):</span>
+<span class="w">    </span><span class="sd">"""Download every long-cadence quarter from NASA's MAST archive (needs astroquery</span>
+<span class="sd">    and astropy the first time), keep the useful columns, cache them as one CSV."""</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">csv_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"kplr</span><span class="si">{</span><span class="n">kic</span><span class="si">:</span><span class="s2">09d</span><span class="si">}</span><span class="s2">_llc.csv"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">csv_path</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">csv_path</span><span class="p">)</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">astroquery.mast</span><span class="w"> </span><span class="kn">import</span> <span class="n">Observations</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">astropy.io</span><span class="w"> </span><span class="kn">import</span> <span class="n">fits</span>
+    <span class="n">obs</span> <span class="o">=</span> <span class="n">Observations</span><span class="o">.</span><span class="n">query_criteria</span><span class="p">(</span><span class="n">target_name</span><span class="o">=</span><span class="sa">f</span><span class="s2">"kplr</span><span class="si">{</span><span class="n">kic</span><span class="si">:</span><span class="s2">09d</span><span class="si">}</span><span class="s2">"</span><span class="p">,</span> <span class="n">obs_collection</span><span class="o">=</span><span class="s2">"Kepler"</span><span class="p">)</span>
+    <span class="n">products</span> <span class="o">=</span> <span class="n">Observations</span><span class="o">.</span><span class="n">get_product_list</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+    <span class="n">llc</span> <span class="o">=</span> <span class="n">products</span><span class="p">[[</span><span class="nb">str</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">"_llc.fits"</span><span class="p">)</span> <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">products</span><span class="p">[</span><span class="s2">"productFilename"</span><span class="p">]]]</span>
+    <span class="n">manifest</span> <span class="o">=</span> <span class="n">Observations</span><span class="o">.</span><span class="n">download_products</span><span class="p">(</span><span class="n">llc</span><span class="p">,</span> <span class="n">download_dir</span><span class="o">=</span><span class="n">path</span><span class="p">)</span>
+    <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">manifest</span><span class="p">[</span><span class="s2">"Local Path"</span><span class="p">]):</span>
+        <span class="k">with</span> <span class="n">fits</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdul</span><span class="p">:</span>
+            <span class="n">d</span><span class="p">,</span> <span class="n">quarter</span> <span class="o">=</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">hdul</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="s2">"QUARTER"</span><span class="p">]</span>
+            <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">"TIME"</span><span class="p">],</span> <span class="s2">"sap_flux"</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">"SAP_FLUX"</span><span class="p">],</span>
+                                        <span class="s2">"pdcsap_flux"</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">"PDCSAP_FLUX"</span><span class="p">],</span>
+                                        <span class="s2">"pdcsap_flux_err"</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">"PDCSAP_FLUX_ERR"</span><span class="p">],</span>
+                                        <span class="s2">"quality"</span><span class="p">:</span> <span class="n">d</span><span class="p">[</span><span class="s2">"SAP_QUALITY"</span><span class="p">],</span> <span class="s2">"quarter"</span><span class="p">:</span> <span class="n">quarter</span><span class="p">}))</span>
+    <span class="n">lc</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">lc</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">csv_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">manifest</span><span class="p">[</span><span class="s2">"Local Path"</span><span class="p">]:</span>          <span class="c1"># the CSV is all we need from now on</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">fname</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lc</span>
+
+<span class="n">lc</span> <span class="o">=</span> <span class="n">fetch_kepler_light_curve</span><span class="p">()</span>
+<span class="n">lc</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>time</th>
+      <th>sap_flux</th>
+      <th>pdcsap_flux</th>
+      <th>pdcsap_flux_err</th>
+      <th>quality</th>
+      <th>quarter</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>131.512439</td>
+      <td>34751.586</td>
+      <td>39024.062</td>
+      <td>6.886208</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>131.532874</td>
+      <td>34765.273</td>
+      <td>39034.062</td>
+      <td>6.890465</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>131.553308</td>
+      <td>34759.652</td>
+      <td>39028.047</td>
+      <td>6.890853</td>
+      <td>8192</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>131.573742</td>
+      <td>34753.820</td>
+      <td>39028.258</td>
+      <td>6.882296</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>131.594176</td>
+      <td>34762.880</td>
+      <td>39031.824</td>
+      <td>6.889281</td>
+      <td>0</td>
+      <td>1</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>The KOI table comes from the NASA Exoplanet Archive's TAP service, which accepts SQL-like queries over the web:</p>
+<pre class="code"><code><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.parse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
+
+<span class="n">KOI_COLUMNS</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"kepid"</span><span class="p">,</span> <span class="s2">"kepoi_name"</span><span class="p">,</span> <span class="s2">"kepler_name"</span><span class="p">,</span> <span class="s2">"koi_disposition"</span><span class="p">,</span> <span class="s2">"koi_score"</span><span class="p">,</span>
+               <span class="s2">"koi_fpflag_nt"</span><span class="p">,</span> <span class="s2">"koi_fpflag_ss"</span><span class="p">,</span> <span class="s2">"koi_fpflag_co"</span><span class="p">,</span> <span class="s2">"koi_fpflag_ec"</span><span class="p">,</span>
+               <span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"koi_time0bk"</span><span class="p">,</span> <span class="s2">"koi_duration"</span><span class="p">,</span> <span class="s2">"koi_depth"</span><span class="p">,</span> <span class="s2">"koi_prad"</span><span class="p">,</span>
+               <span class="s2">"koi_impact"</span><span class="p">,</span> <span class="s2">"koi_model_snr"</span><span class="p">,</span> <span class="s2">"koi_num_transits"</span><span class="p">,</span> <span class="s2">"koi_teq"</span><span class="p">,</span> <span class="s2">"koi_insol"</span><span class="p">,</span>
+               <span class="s2">"koi_steff"</span><span class="p">,</span> <span class="s2">"koi_slogg"</span><span class="p">,</span> <span class="s2">"koi_srad"</span><span class="p">,</span> <span class="s2">"koi_smass"</span><span class="p">,</span> <span class="s2">"koi_kepmag"</span><span class="p">]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_koi_table</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATASETS_PATH</span><span class="p">,</span> <span class="s2">"nasa"</span><span class="p">)):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">csv_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"kepler_koi_cumulative.csv"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">csv_path</span><span class="p">):</span>
+        <span class="n">query</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">"select </span><span class="si">{</span><span class="s1">','</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">KOI_COLUMNS</span><span class="p">)</span><span class="si">}</span><span class="s2"> from cumulative"</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="p">(</span><span class="s2">"https://exoplanetarchive.ipac.caltech.edu/TAP/sync?"</span> <span class="o">+</span>
+               <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">({</span><span class="s2">"query"</span><span class="p">:</span> <span class="n">query</span><span class="p">,</span> <span class="s2">"format"</span><span class="p">:</span> <span class="s2">"csv"</span><span class="p">}))</span>
+        <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">csv_path</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">csv_path</span><span class="p">)</span>
+
+<span class="n">koi</span> <span class="o">=</span> <span class="n">fetch_koi_table</span><span class="p">()</span>
+<span class="n">koi</span><span class="o">.</span><span class="n">shape</span>
+</code></pre>
+<pre class="output">(9564, 24)</pre>
+
+<h3 id="quick-look">Take a Quick Look at the Data Structure</h3>
+<pre class="code"><code><span class="n">lc</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+</code></pre>
+<pre class="output">&lt;class &#x27;pandas.DataFrame&#x27;&gt;
+RangeIndex: 54400 entries, 0 to 54399
+Data columns (total 6 columns):
+ #   Column           Non-Null Count  Dtype  
+---  ------           --------------  -----  
+ 0   time             52553 non-null  float64
+ 1   sap_flux         51759 non-null  float64
+ 2   pdcsap_flux      51503 non-null  float64
+ 3   pdcsap_flux_err  51503 non-null  float64
+ 4   quality          54400 non-null  int64  
+ 5   quarter          54400 non-null  int64  
+dtypes: float64(4), int64(2)
+memory usage: 2.5 MB</pre>
+<pre class="code"><code><span class="n">lc</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"quarter"</span><span class="p">)</span><span class="o">.</span><span class="n">agg</span><span class="p">(</span><span class="n">points</span><span class="o">=</span><span class="p">(</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"size"</span><span class="p">),</span> <span class="n">start</span><span class="o">=</span><span class="p">(</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"min"</span><span class="p">),</span> <span class="n">end</span><span class="o">=</span><span class="p">(</span><span class="s2">"time"</span><span class="p">,</span> <span class="s2">"max"</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th>quarter</th>
+      <th>1</th>
+      <th>2</th>
+      <th>3</th>
+      <th>4</th>
+      <th>5</th>
+      <th>6</th>
+      <th>7</th>
+      <th>9</th>
+      <th>10</th>
+      <th>11</th>
+      <th>13</th>
+      <th>14</th>
+      <th>15</th>
+      <th>17</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>points</th>
+      <td>1639.0</td>
+      <td>4354.0</td>
+      <td>4370.0</td>
+      <td>1021.0</td>
+      <td>4634.0</td>
+      <td>4398.0</td>
+      <td>4375.0</td>
+      <td>4768.0</td>
+      <td>4573.0</td>
+      <td>4754.0</td>
+      <td>4421.0</td>
+      <td>4757.0</td>
+      <td>4780.0</td>
+      <td>1556.0</td>
+    </tr>
+    <tr>
+      <th>start</th>
+      <td>131.5</td>
+      <td>169.5</td>
+      <td>260.2</td>
+      <td>352.4</td>
+      <td>443.5</td>
+      <td>539.4</td>
+      <td>630.2</td>
+      <td>808.5</td>
+      <td>906.8</td>
+      <td>1001.2</td>
+      <td>1182.7</td>
+      <td>1274.1</td>
+      <td>1373.5</td>
+      <td>1559.2</td>
+    </tr>
+    <tr>
+      <th>end</th>
+      <td>165.0</td>
+      <td>258.5</td>
+      <td>349.5</td>
+      <td>373.2</td>
+      <td>538.2</td>
+      <td>629.3</td>
+      <td>719.5</td>
+      <td>905.9</td>
+      <td>1000.3</td>
+      <td>1098.3</td>
+      <td>1273.1</td>
+      <td>1371.3</td>
+      <td>1471.1</td>
+      <td>1591.0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>Kepler rotated every three months to keep its solar panels facing the Sun, so the data come in <em>quarters</em>. Each quarter puts the star on a different detector, with a different sensitivity. Some quarters are missing (8, 12 and 16), because Kepler-90 fell on a failed detector module. Let's look at the raw and corrected fluxes (<a href="#fig-raw">Figure 5-1</a>):</p>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">q</span><span class="p">,</span> <span class="n">grp</span> <span class="ow">in</span> <span class="n">lc</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"quarter"</span><span class="p">):</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">grp</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">grp</span><span class="p">[</span><span class="s2">"sap_flux"</span><span class="p">]</span> <span class="o">/</span> <span class="n">grp</span><span class="p">[</span><span class="s2">"sap_flux"</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">(),</span> <span class="s2">","</span><span class="p">)</span>
+    <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">grp</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="n">grp</span><span class="p">[</span><span class="s2">"pdcsap_flux"</span><span class="p">]</span> <span class="o">/</span> <span class="n">grp</span><span class="p">[</span><span class="s2">"pdcsap_flux"</span><span class="p">]</span><span class="o">.</span><span class="n">median</span><span class="p">(),</span> <span class="s2">","</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"SAP flux (raw)"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"PDCSAP flux"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"time (BJD − 2454833, days)"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mf">0.985</span><span class="p">,</span> <span class="mf">1.01</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"raw_light_curve_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-raw"><img src="images/raw_light_curve_plot.png" alt="Raw and corrected light curve"><figcaption><b>Figure 5-1.</b> Four years of Kepler-90: raw flux (top) and the mission's systematics-corrected PDCSAP flux (bottom)</figcaption></figure>
+<p>The raw flux jumps between quarters and drifts within each one, by far more than any planet signal. The corrected flux removes most instrumental trends. The isolated downward spikes are already visible: those are transits of Kepler-90's giant planets. Now the catalog:</p>
+<pre class="code"><code><span class="n">koi</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+</code></pre>
+<pre class="output">&lt;class &#x27;pandas.DataFrame&#x27;&gt;
+RangeIndex: 9564 entries, 0 to 9563
+Data columns (total 24 columns):
+ #   Column            Non-Null Count  Dtype  
+---  ------            --------------  -----  
+ 0   kepid             9564 non-null   int64  
+ 1   kepoi_name        9564 non-null   str    
+ 2   kepler_name       2748 non-null   str    
+ 3   koi_disposition   9564 non-null   str    
+ 4   koi_score         8054 non-null   float64
+ 5   koi_fpflag_nt     9564 non-null   int64  
+ 6   koi_fpflag_ss     9564 non-null   int64  
+ 7   koi_fpflag_co     9564 non-null   int64  
+ 8   koi_fpflag_ec     9564 non-null   int64  
+ 9   koi_period        9564 non-null   float64
+ 10  koi_time0bk       9564 non-null   float64
+ 11  koi_duration      9564 non-null   float64
+ 12  koi_depth         9201 non-null   float64
+ 13  koi_prad          9201 non-null   float64
+ 14  koi_impact        9201 non-null   float64
+ 15  koi_model_snr     9201 non-null   float64
+ 16  koi_num_transits  8422 non-null   float64
+ 17  koi_teq           9201 non-null   float64
+ 18  koi_insol         9243 non-null   float64
+ 19  koi_steff         9201 non-null   float64
+ 20  koi_slogg         9201 non-null   float64
+ 21  koi_srad          9201 non-null   float64
+ 22  koi_smass         9201 non-null   float64
+ 23  koi_kepmag        9563 non-null   float64
+dtypes: float64(16), int64(5), str(3)
+memory usage: 1.8 MB</pre>
+<pre class="code"><code><span class="n">koi</span><span class="p">[</span><span class="s2">"koi_disposition"</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+</code></pre>
+<pre class="output">koi_disposition
+FALSE POSITIVE    4839
+CONFIRMED         2748
+CANDIDATE         1977
+Name: count, dtype: int64</pre>
+<pre class="code"><code><span class="n">koi</span><span class="p">[[</span><span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"koi_duration"</span><span class="p">,</span> <span class="s2">"koi_depth"</span><span class="p">,</span> <span class="s2">"koi_prad"</span><span class="p">,</span> <span class="s2">"koi_model_snr"</span><span class="p">,</span> <span class="s2">"koi_steff"</span><span class="p">,</span>
+     <span class="s2">"koi_srad"</span><span class="p">]]</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>koi_period</th>
+      <th>koi_duration</th>
+      <th>koi_depth</th>
+      <th>koi_prad</th>
+      <th>koi_model_snr</th>
+      <th>koi_steff</th>
+      <th>koi_srad</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>9564.00</td>
+      <td>9564.00</td>
+      <td>9201.00</td>
+      <td>9201.00</td>
+      <td>9201.00</td>
+      <td>9201.00</td>
+      <td>9201.00</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>75.67</td>
+      <td>5.62</td>
+      <td>23791.34</td>
+      <td>102.89</td>
+      <td>259.90</td>
+      <td>5706.82</td>
+      <td>1.73</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>1334.74</td>
+      <td>6.47</td>
+      <td>82242.68</td>
+      <td>3077.64</td>
+      <td>795.81</td>
+      <td>796.86</td>
+      <td>6.13</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>0.24</td>
+      <td>0.05</td>
+      <td>0.00</td>
+      <td>0.08</td>
+      <td>0.00</td>
+      <td>2661.00</td>
+      <td>0.11</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>2.73</td>
+      <td>2.44</td>
+      <td>159.90</td>
+      <td>1.40</td>
+      <td>12.00</td>
+      <td>5310.00</td>
+      <td>0.83</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>9.75</td>
+      <td>3.79</td>
+      <td>421.10</td>
+      <td>2.39</td>
+      <td>23.00</td>
+      <td>5767.00</td>
+      <td>1.00</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>40.72</td>
+      <td>6.28</td>
+      <td>1473.40</td>
+      <td>14.93</td>
+      <td>78.00</td>
+      <td>6112.00</td>
+      <td>1.34</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>129995.78</td>
+      <td>138.54</td>
+      <td>1541400.00</td>
+      <td>200346.00</td>
+      <td>9054.70</td>
+      <td>15896.00</td>
+      <td>229.91</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="code"><code><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">koi</span><span class="p">[[</span><span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"koi_duration"</span><span class="p">,</span> <span class="s2">"koi_depth"</span><span class="p">,</span> <span class="s2">"koi_prad"</span><span class="p">,</span> <span class="s2">"koi_model_snr"</span><span class="p">]]</span>
+         <span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">lower</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">))</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">bins</span><span class="o">=</span><span class="mi">50</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"koi_histogram_plots"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-koihist"><img src="images/koi_histogram_plots.png" alt="KOI histograms"><figcaption><b>Figure 5-2.</b> Histograms of the (log₁₀) KOI attributes</figcaption></figure>
+<p>Everything spans many orders of magnitude. Periods run from hours to years, depths from a few ppm to 100%, and "radii" from smaller than Mercury to 200,000 Earth radii. That last one is obviously not a planet: it's a stellar eclipse. With heavy tails like these, we'll work with logarithms.</p>
+
+<h3 id="test-set">Create a Test Set</h3>
+<p>We keep only labeled KOIs. The candidates are what the model will be used on later. Two precautions: planets of the same star stay together (<code>StratifiedGroupKFold</code> with the star's <code>kepid</code> as group), and Kepler-90 is held out entirely, because it will be our final, end-to-end test:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">StratifiedGroupKFold</span>
+
+<span class="n">labeled</span> <span class="o">=</span> <span class="n">koi</span><span class="p">[</span><span class="n">koi</span><span class="p">[</span><span class="s2">"koi_disposition"</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">([</span><span class="s2">"CONFIRMED"</span><span class="p">,</span> <span class="s2">"FALSE POSITIVE"</span><span class="p">])]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">labeled</span><span class="p">[</span><span class="s2">"is_planet"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">labeled</span><span class="p">[</span><span class="s2">"koi_disposition"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"CONFIRMED"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="c1"># Kepler-90 is our final, independent test: keep all of its KOIs out of everything</span>
+<span class="n">holdout_star</span> <span class="o">=</span> <span class="n">labeled</span><span class="p">[</span><span class="s2">"kepid"</span><span class="p">]</span> <span class="o">==</span> <span class="n">KEPLER90_KIC</span>
+<span class="n">labeled</span> <span class="o">=</span> <span class="n">labeled</span><span class="p">[</span><span class="o">~</span><span class="n">holdout_star</span><span class="p">]</span>
+<span class="n">splitter</span> <span class="o">=</span> <span class="n">StratifiedGroupKFold</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">shuffle</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">train_idx</span><span class="p">,</span> <span class="n">test_idx</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">splitter</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">labeled</span><span class="p">,</span> <span class="n">labeled</span><span class="p">[</span><span class="s2">"is_planet"</span><span class="p">],</span> <span class="n">groups</span><span class="o">=</span><span class="n">labeled</span><span class="p">[</span><span class="s2">"kepid"</span><span class="p">]))</span>
+<span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span> <span class="o">=</span> <span class="n">labeled</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">train_idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">labeled</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">test_idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">train_set</span><span class="p">),</span> <span class="s2">"train,"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_set</span><span class="p">),</span> <span class="s2">"test, shared stars:"</span><span class="p">,</span>
+      <span class="nb">len</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">train_set</span><span class="p">[</span><span class="s2">"kepid"</span><span class="p">])</span> <span class="o">&amp;</span> <span class="nb">set</span><span class="p">(</span><span class="n">test_set</span><span class="p">[</span><span class="s2">"kepid"</span><span class="p">])))</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"planet fraction: train </span><span class="si">%.3f</span><span class="s2">, test </span><span class="si">%.3f</span><span class="s2">"</span> <span class="o">%</span> <span class="p">(</span><span class="n">train_set</span><span class="p">[</span><span class="s2">"is_planet"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="n">test_set</span><span class="p">[</span><span class="s2">"is_planet"</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()))</span>
+</code></pre>
+<pre class="output">6064 train, 1516 test, shared stars: 0
+planet fraction: train 0.362, test 0.361</pre>
+
+<h2 id="discover">Discover and Visualize the Data to Gain Insights</h2>
+<h3 id="viz-lc">Looking at a Light Curve</h3>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.ndimage</span><span class="w"> </span><span class="kn">import</span> <span class="n">median_filter</span>
+
+<span class="n">good</span> <span class="o">=</span> <span class="p">(</span><span class="n">lc</span><span class="p">[</span><span class="s2">"quality"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">lc</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span> <span class="o">&amp;</span> <span class="n">lc</span><span class="p">[</span><span class="s2">"pdcsap_flux"</span><span class="p">]</span><span class="o">.</span><span class="n">notna</span><span class="p">()</span>
+<span class="n">lc_good</span> <span class="o">=</span> <span class="n">lc</span><span class="p">[</span><span class="n">good</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">lc_good</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">]</span> <span class="o">=</span> <span class="n">lc_good</span><span class="p">[</span><span class="s2">"pdcsap_flux"</span><span class="p">]</span> <span class="o">/</span> <span class="n">lc_good</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"quarter"</span><span class="p">)[</span><span class="s2">"pdcsap_flux"</span><span class="p">]</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="s2">"median"</span><span class="p">)</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">lc</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">lc_good</span><span class="p">)</span>
+</code></pre>
+<pre class="output">(54400, 44744)</pre>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">))</span>
+<span class="n">win</span> <span class="o">=</span> <span class="p">(</span><span class="n">lc_good</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">470</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lc_good</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">476</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lc_good</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">win</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">],</span> <span class="n">lc_good</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">win</span><span class="p">,</span> <span class="s2">"flux"</span><span class="p">],</span> <span class="s2">"k."</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"6 days of Kepler-90"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"time (days)"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"relative flux"</span><span class="p">)</span>
+<span class="n">q</span> <span class="o">=</span> <span class="n">lc_good</span><span class="p">[</span><span class="s2">"quarter"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">4</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lc_good</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">q</span><span class="p">,</span> <span class="s2">"time"</span><span class="p">],</span> <span class="n">lc_good</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">q</span><span class="p">,</span> <span class="s2">"flux"</span><span class="p">],</span> <span class="s2">"k."</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"one quarter (90 days)"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"time (days)"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"light_curve_zoom_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-zoom"><img src="images/light_curve_zoom_plot.png" alt="Zoom on a transit"><figcaption><b>Figure 5-3.</b> Left: a transit of Kepler-90's largest planet. The star dims by 0.8% for about 14 hours. Right: a whole quarter.</figcaption></figure>
+<p>On the left, a textbook transit: a flat-bottomed dip with sloped edges. The edges slope because the planet takes time to fully enter the star's disk, and because the star's limb is darker than its center. On the right, over a whole quarter, the star's own slow variations of a few hundred ppm are larger than most planet signals. We'll have to remove them.</p>
+
+<h3 id="viz-koi">Visualizing the Planet Catalog</h3>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mi">6</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"FALSE POSITIVE"</span><span class="p">,</span> <span class="s2">"tab:red"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"CONFIRMED"</span><span class="p">,</span> <span class="s2">"tab:blue"</span><span class="p">)]:</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="n">train_set</span><span class="p">[</span><span class="s2">"koi_disposition"</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="s2">"koi_period"</span><span class="p">],</span> <span class="n">s</span><span class="p">[</span><span class="s2">"koi_prad"</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.35</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">"log"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s2">"log"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="mf">0.3</span><span class="p">,</span> <span class="mi">300</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">11.2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">":"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.6</span><span class="p">,</span> <span class="mi">13</span><span class="p">,</span> <span class="s2">"Jupiter"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">":"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mf">0.6</span><span class="p">,</span> <span class="mf">1.1</span><span class="p">,</span> <span class="s2">"Earth"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"orbital period (days)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"radius (Earth radii)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">markerscale</span><span class="o">=</span><span class="mi">4</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">which</span><span class="o">=</span><span class="s2">"both"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"period_radius_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-pr"><img src="images/period_radius_plot.png" alt="Period-radius diagram"><figcaption><b>Figure 5-4.</b> Period against radius for the training KOIs: confirmed planets (blue) and false positives (red)</figcaption></figure>
+<p>The two classes overlap, but they are not distributed alike. False positives dominate above the size of Jupiter: anything that large is probably a star. Confirmed planets cluster between one and four Earth radii, the "super-Earths" and "sub-Neptunes" that turned out to be the most common planets in the Galaxy, although our Solar System has none.</p>
+
+<h3 id="correlations">Looking for Correlations</h3>
+<pre class="code"><code><span class="n">num</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[[</span><span class="s2">"is_planet"</span><span class="p">,</span> <span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"koi_duration"</span><span class="p">,</span> <span class="s2">"koi_depth"</span><span class="p">,</span> <span class="s2">"koi_prad"</span><span class="p">,</span>
+                 <span class="s2">"koi_model_snr"</span><span class="p">,</span> <span class="s2">"koi_steff"</span><span class="p">,</span> <span class="s2">"koi_slogg"</span><span class="p">,</span> <span class="s2">"koi_srad"</span><span class="p">,</span> <span class="s2">"koi_kepmag"</span><span class="p">]]</span>
+<span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">num</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="s2">"is_planet"</span><span class="p">)</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">lower</span><span class="o">=</span><span class="mf">1e-3</span><span class="p">))</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">is_planet</span><span class="o">=</span><span class="n">num</span><span class="p">[</span><span class="s2">"is_planet"</span><span class="p">])</span> \
+    <span class="o">.</span><span class="n">corr</span><span class="p">()[</span><span class="s2">"is_planet"</span><span class="p">]</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<pre class="output">is_planet        1.000
+koi_slogg        0.151
+koi_period       0.101
+koi_kepmag       0.063
+koi_duration    -0.133
+koi_model_snr   -0.181
+koi_srad        -0.197
+koi_steff       -0.222
+koi_depth       -0.241
+koi_prad        -0.398
+Name: is_planet, dtype: float64</pre>
+<p>The radius has the strongest (negative) correlation with being a planet, then depth and stellar temperature. As always, correlation only captures linear relationships on these log-scaled features. Tree-based models will find more.</p>
+
+<h3 id="combinations">Experimenting with Attribute Combinations</h3>
+<p>Here's where domain knowledge pays. Equation 5-2 tells us how long a transit <em>should</em> last for a planet on a circular orbit around a star of the catalog's density. A blended eclipsing binary has no reason to obey it: the star whose density we assume isn't the one being eclipsed. Let's create the ratio of observed to expected duration:</p>
+<pre class="code"><code><span class="c1"># Kepler's third law predicts how long a transit should last around a star of given</span>
+<span class="c1"># density: T ≈ 13 h × (P / 1 yr)^(1/3) × (ρ★/ρ☉)^(-1/3)  (central transit, circular orbit)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">expected_duration_hours</span><span class="p">(</span><span class="n">period_days</span><span class="p">,</span> <span class="n">logg</span><span class="p">,</span> <span class="n">srad</span><span class="p">):</span>
+    <span class="n">rho</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="n">logg</span> <span class="o">-</span> <span class="mf">4.438</span><span class="p">)</span> <span class="o">/</span> <span class="n">srad</span>                   <span class="c1"># stellar density (solar units)</span>
+    <span class="k">return</span> <span class="mf">13.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">period_days</span> <span class="o">/</span> <span class="mf">365.25</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span> <span class="o">*</span> <span class="n">rho</span> <span class="o">**</span> <span class="p">(</span><span class="o">-</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>
+
+<span class="n">train_set</span><span class="p">[</span><span class="s2">"duration_ratio"</span><span class="p">]</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="s2">"koi_duration"</span><span class="p">]</span> <span class="o">/</span> <span class="n">expected_duration_hours</span><span class="p">(</span>
+    <span class="n">train_set</span><span class="p">[</span><span class="s2">"koi_period"</span><span class="p">],</span> <span class="n">train_set</span><span class="p">[</span><span class="s2">"koi_slogg"</span><span class="p">],</span> <span class="n">train_set</span><span class="p">[</span><span class="s2">"koi_srad"</span><span class="p">])</span>
+<span class="n">train_set</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"koi_disposition"</span><span class="p">)[</span><span class="s2">"duration_ratio"</span><span class="p">]</span><span class="o">.</span><span class="n">describe</span><span class="p">()[[</span><span class="s2">"25%"</span><span class="p">,</span> <span class="s2">"50%"</span><span class="p">,</span> <span class="s2">"75%"</span><span class="p">]]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>25%</th>
+      <th>50%</th>
+      <th>75%</th>
+    </tr>
+    <tr>
+      <th>koi_disposition</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>CONFIRMED</th>
+      <td>0.73</td>
+      <td>0.90</td>
+      <td>1.03</td>
+    </tr>
+    <tr>
+      <th>FALSE POSITIVE</th>
+      <td>0.63</td>
+      <td>1.09</td>
+      <td>1.74</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">9</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">))</span>
+<span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">logspace</span><span class="p">(</span><span class="o">-</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">,</span> <span class="mi">60</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">label</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"FALSE POSITIVE"</span><span class="p">,</span> <span class="s2">"tab:red"</span><span class="p">),</span> <span class="p">(</span><span class="s2">"CONFIRMED"</span><span class="p">,</span> <span class="s2">"tab:blue"</span><span class="p">)]:</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">hist</span><span class="p">(</span><span class="n">train_set</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">train_set</span><span class="p">[</span><span class="s2">"koi_disposition"</span><span class="p">]</span> <span class="o">==</span> <span class="n">label</span><span class="p">,</span> <span class="s2">"duration_ratio"</span><span class="p">],</span> <span class="n">bins</span><span class="o">=</span><span class="n">bins</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.55</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="o">.</span><span class="n">lower</span><span class="p">(),</span> <span class="n">density</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">"log"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"observed / expected transit duration"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"density"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">":"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"duration_ratio_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-ratio"><img src="images/duration_ratio_plot.png" alt="Duration ratio"><figcaption><b>Figure 5-5.</b> Observed/expected transit duration: planets cluster just below 1, false positives spread widely</figcaption></figure>
+<p>Confirmed planets peak sharply just below 1, as expected: non-central transits are a bit shorter. False positives are spread over two orders of magnitude. This is the kind of feature a generic model would need a lot of data to discover alone, and we got it for free from Kepler's third law.</p>
+
+<h2 id="prepare">Prepare the Data for Machine Learning Algorithms</h2>
+<h3 id="detrend">Cleaning a Light Curve</h3>
+<p>For the search, we must flatten the star's slow variations while keeping the transits. A running median over about a day removes trends longer than a day but barely touches dips of a few hours. Dividing by it leaves a flat light curve. We then clip upward outliers (cosmic rays, flares), but never downward ones, since that's where planets hide. As usual, it's a transformer with tunable hyperparameters:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">LightCurveDetrender</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Divide each quarter by a running median (removes stellar and instrumental drifts</span>
+<span class="sd">    slower than the window), then clip upward outliers (cosmic rays, flares)."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">window_days</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">clip_sigma</span><span class="o">=</span><span class="mf">4.0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">window_days</span> <span class="o">=</span> <span class="n">window_days</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">clip_sigma</span> <span class="o">=</span> <span class="n">clip_sigma</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__sklearn_is_fitted__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">q</span><span class="p">,</span> <span class="n">grp</span> <span class="ow">in</span> <span class="n">X</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="s2">"quarter"</span><span class="p">):</span>
+            <span class="n">size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">window_days</span> <span class="o">/</span> <span class="p">(</span><span class="mf">29.4244</span> <span class="o">/</span> <span class="mi">1440</span><span class="p">))</span> <span class="o">|</span> <span class="mi">1</span>      <span class="c1"># odd number of cadences</span>
+            <span class="n">trend</span> <span class="o">=</span> <span class="n">median_filter</span><span class="p">(</span><span class="n">grp</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="n">size</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="s2">"nearest"</span><span class="p">)</span>
+            <span class="n">out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"time"</span><span class="p">:</span> <span class="n">grp</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="s2">"flux"</span><span class="p">:</span> <span class="n">grp</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">trend</span><span class="p">}))</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">out</span><span class="p">,</span> <span class="n">ignore_index</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">noise</span> <span class="o">=</span> <span class="mf">1.4826</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">out</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">out</span><span class="p">[</span><span class="n">out</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">1</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">clip_sigma</span> <span class="o">*</span> <span class="n">noise</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">detrended</span> <span class="o">=</span> <span class="n">LightCurveDetrender</span><span class="p">()</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">lc_good</span><span class="p">)</span>
+<span class="n">noise_ppm</span> <span class="o">=</span> <span class="mf">1e6</span> <span class="o">*</span> <span class="mf">1.4826</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">detrended</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">detrended</span><span class="p">)</span><span class="si">}</span><span class="s2"> points, robust noise = </span><span class="si">{</span><span class="n">noise_ppm</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> ppm per 29.4-minute cadence"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">44720 points, robust noise = 178 ppm per 29.4-minute cadence</pre>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">detrended</span><span class="p">[</span><span class="s2">"time"</span><span class="p">],</span> <span class="p">(</span><span class="n">detrended</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span> <span class="s2">"k,"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">7000</span><span class="p">,</span> <span class="mi">1500</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"time (days)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"flux − 1 (ppm)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"detrended_light_curve_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-flat"><img src="images/detrended_light_curve_plot.png" alt="Detrended light curve"><figcaption><b>Figure 5-6.</b> The detrended light curve, ready for the search</figcaption></figure>
+<p>The noise is now about 180 ppm per half-hour, and the deep transits stand out. The shallow ones are invisible to the eye: they are hidden below the noise, and only a search that stacks many transits can find them.</p>
+
+<h3 id="pipelines">Transformation Pipelines</h3>
+<p>For the classifier, numerical features need imputing (a few hundred KOIs lack stellar parameters), log-transforming (heavy tails) and scaling. The transit features and the stellar features go through slightly different pipelines, combined with a <code>ColumnTransformer</code>. Our custom <code>DurationRatioAdder</code> comes first, and its <code>add_duration_ratio</code> switch lets us test whether the feature helps:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.compose</span><span class="w"> </span><span class="kn">import</span> <span class="n">ColumnTransformer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.impute</span><span class="w"> </span><span class="kn">import</span> <span class="n">SimpleImputer</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">FunctionTransformer</span><span class="p">,</span> <span class="n">StandardScaler</span>
+
+<span class="n">TRANSIT_FEATURES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"koi_duration"</span><span class="p">,</span> <span class="s2">"koi_depth"</span><span class="p">,</span> <span class="s2">"koi_prad"</span><span class="p">,</span> <span class="s2">"koi_model_snr"</span><span class="p">]</span>
+<span class="n">STAR_FEATURES</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"koi_steff"</span><span class="p">,</span> <span class="s2">"koi_slogg"</span><span class="p">,</span> <span class="s2">"koi_srad"</span><span class="p">,</span> <span class="s2">"koi_kepmag"</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DurationRatioAdder</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Adds observed/expected transit duration (an engineered physics feature)."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">add_duration_ratio</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">add_duration_ratio</span> <span class="o">=</span> <span class="n">add_duration_ratio</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__sklearn_is_fitted__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">X</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_duration_ratio</span><span class="p">:</span>
+            <span class="n">X</span><span class="p">[</span><span class="s2">"duration_ratio"</span><span class="p">]</span> <span class="o">=</span> <span class="n">X</span><span class="p">[</span><span class="s2">"koi_duration"</span><span class="p">]</span> <span class="o">/</span> <span class="n">expected_duration_hours</span><span class="p">(</span>
+                <span class="n">X</span><span class="p">[</span><span class="s2">"koi_period"</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="s2">"koi_slogg"</span><span class="p">],</span> <span class="n">X</span><span class="p">[</span><span class="s2">"koi_srad"</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">X</span>
+
+<span class="n">log_pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">"imputer"</span><span class="p">,</span> <span class="n">SimpleImputer</span><span class="p">(</span><span class="n">strategy</span><span class="o">=</span><span class="s2">"median"</span><span class="p">)),</span>
+    <span class="p">(</span><span class="s2">"log"</span><span class="p">,</span> <span class="n">FunctionTransformer</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="kc">None</span><span class="p">)),</span> <span class="n">feature_names_out</span><span class="o">=</span><span class="s2">"one-to-one"</span><span class="p">)),</span>
+    <span class="p">(</span><span class="s2">"scaler"</span><span class="p">,</span> <span class="n">StandardScaler</span><span class="p">()),</span>
+<span class="p">])</span>
+<span class="n">star_pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">"imputer"</span><span class="p">,</span> <span class="n">SimpleImputer</span><span class="p">(</span><span class="n">strategy</span><span class="o">=</span><span class="s2">"median"</span><span class="p">)),</span>
+    <span class="p">(</span><span class="s2">"scaler"</span><span class="p">,</span> <span class="n">StandardScaler</span><span class="p">()),</span>
+<span class="p">])</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">make_preprocessing</span><span class="p">(</span><span class="n">add_duration_ratio</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="n">cols_log</span> <span class="o">=</span> <span class="n">TRANSIT_FEATURES</span> <span class="o">+</span> <span class="p">([</span><span class="s2">"duration_ratio"</span><span class="p">]</span> <span class="k">if</span> <span class="n">add_duration_ratio</span> <span class="k">else</span> <span class="p">[])</span>
+    <span class="k">return</span> <span class="n">Pipeline</span><span class="p">([</span>
+        <span class="p">(</span><span class="s2">"attribs"</span><span class="p">,</span> <span class="n">DurationRatioAdder</span><span class="p">(</span><span class="n">add_duration_ratio</span><span class="p">)),</span>
+        <span class="p">(</span><span class="s2">"columns"</span><span class="p">,</span> <span class="n">ColumnTransformer</span><span class="p">([(</span><span class="s2">"transit"</span><span class="p">,</span> <span class="n">log_pipeline</span><span class="p">,</span> <span class="n">cols_log</span><span class="p">),</span>
+                                       <span class="p">(</span><span class="s2">"star"</span><span class="p">,</span> <span class="n">star_pipeline</span><span class="p">,</span> <span class="n">STAR_FEATURES</span><span class="p">)])),</span>
+    <span class="p">])</span>
+
+<span class="n">preprocessing</span> <span class="o">=</span> <span class="n">make_preprocessing</span><span class="p">()</span>
+<span class="n">X_train</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="n">TRANSIT_FEATURES</span> <span class="o">+</span> <span class="n">STAR_FEATURES</span><span class="p">]</span>
+<span class="n">y_train</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="s2">"is_planet"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">X_train_prepared</span> <span class="o">=</span> <span class="n">preprocessing</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
+<span class="n">X_train_prepared</span><span class="o">.</span><span class="n">shape</span>
+</code></pre>
+<pre class="output">(6064, 10)</pre>
+
+<h2 id="train">Select and Train a Model</h2>
+<h3 id="leakage">A Warning About Leakage</h3>
+<p>The KOI table contains columns that look very tempting: <code>koi_score</code> and the four <code>koi_fpflag_*</code> flags. Let's see what happens if we include them:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomForestClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">cross_val_score</span><span class="p">,</span> <span class="n">GroupKFold</span>
+
+<span class="n">groups</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="s2">"kepid"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">leaky</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[</span><span class="n">TRANSIT_FEATURES</span> <span class="o">+</span> <span class="n">STAR_FEATURES</span> <span class="o">+</span> <span class="p">[</span><span class="s2">"koi_score"</span><span class="p">,</span> <span class="s2">"koi_fpflag_nt"</span><span class="p">,</span> <span class="s2">"koi_fpflag_ss"</span><span class="p">,</span>
+                                                      <span class="s2">"koi_fpflag_co"</span><span class="p">,</span> <span class="s2">"koi_fpflag_ec"</span><span class="p">]]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">scores</span> <span class="o">=</span> <span class="n">cross_val_score</span><span class="p">(</span><span class="n">RandomForestClassifier</span><span class="p">(</span><span class="n">n_estimators</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">),</span> <span class="n">leaky</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span>
+                         <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">GroupKFold</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span> <span class="n">scoring</span><span class="o">=</span><span class="s2">"accuracy"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"accuracy WITH the vetting flags: </span><span class="si">{</span><span class="n">scores</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">   &lt;- too good to be true"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">accuracy WITH the vetting flags: 0.9941   &lt;- too good to be true</pre>
+<div class="admon warning"><div class="icon">!</div><div class="body"><p>99.4% accuracy should make you suspicious, not happy. These columns are the <em>outputs</em> of NASA's own vetting process (the "Robovetter") that produced the labels. Including them amounts to giving the model the answer key. This is <em>target leakage</em>, and it is one of the most common ways ML projects fool themselves. Ask of every feature: "would I have this value at prediction time, before the label is known?" Here the answer is no, so we drop them.</p></div></div>
+
+<h3 id="training">Training and Evaluating</h3>
+<p>A logistic regression first:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LogisticRegression</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">roc_auc_score</span>
+
+<span class="n">log_clf</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([(</span><span class="s2">"prep"</span><span class="p">,</span> <span class="n">make_preprocessing</span><span class="p">()),</span> <span class="p">(</span><span class="s2">"clf"</span><span class="p">,</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">))])</span>
+<span class="n">log_clf</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"training ROC AUC:"</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">roc_auc_score</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span> <span class="n">log_clf</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_train</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]),</span> <span class="mi">4</span><span class="p">))</span>
+</code></pre>
+<pre class="output">training ROC AUC: 0.8531</pre>
+<p>Now let's compare three model families, with and without the duration ratio, using grouped 5-fold cross-validation:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">HistGradientBoostingClassifier</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">cross_validate</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">display_scores</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">26s</span><span class="si">}</span><span class="s2"> AUC </span><span class="si">{</span><span class="n">s</span><span class="p">[</span><span class="s1">'test_roc_auc'</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2"> ± </span><span class="si">{</span><span class="n">s</span><span class="p">[</span><span class="s1">'test_roc_auc'</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">   "</span>
+          <span class="sa">f</span><span class="s2">"accuracy </span><span class="si">{</span><span class="n">s</span><span class="p">[</span><span class="s1">'test_accuracy'</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+
+<span class="n">candidates</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"logistic regression"</span><span class="p">:</span> <span class="n">LogisticRegression</span><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="mi">1000</span><span class="p">),</span>
+    <span class="s2">"random forest"</span><span class="p">:</span> <span class="n">RandomForestClassifier</span><span class="p">(</span><span class="n">n_estimators</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">),</span>
+    <span class="s2">"gradient boosting"</span><span class="p">:</span> <span class="n">HistGradientBoostingClassifier</span><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">),</span>
+<span class="p">}</span>
+<span class="n">cv</span> <span class="o">=</span> <span class="n">GroupKFold</span><span class="p">(</span><span class="mi">5</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">clf</span> <span class="ow">in</span> <span class="n">candidates</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="k">for</span> <span class="n">ratio</span> <span class="ow">in</span> <span class="p">(</span><span class="kc">False</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([(</span><span class="s2">"prep"</span><span class="p">,</span> <span class="n">make_preprocessing</span><span class="p">(</span><span class="n">ratio</span><span class="p">)),</span> <span class="p">(</span><span class="s2">"clf"</span><span class="p">,</span> <span class="n">clf</span><span class="p">)])</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">cross_validate</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="p">[</span><span class="s2">"roc_auc"</span><span class="p">,</span> <span class="s2">"accuracy"</span><span class="p">])</span>
+        <span class="n">display_scores</span><span class="p">(</span><span class="n">name</span> <span class="o">+</span> <span class="p">(</span><span class="s2">" + duration ratio"</span> <span class="k">if</span> <span class="n">ratio</span> <span class="k">else</span> <span class="s2">""</span><span class="p">),</span> <span class="n">s</span><span class="p">)</span>
+</code></pre>
+<pre class="output">logistic regression        AUC 0.8300 ± 0.0106   accuracy 0.7536
+logistic regression + duration ratio AUC 0.8515 ± 0.0099   accuracy 0.7688
+random forest              AUC 0.9701 ± 0.0038   accuracy 0.9197
+random forest + duration ratio AUC 0.9736 ± 0.0014   accuracy 0.9256
+gradient boosting          AUC 0.9749 ± 0.0028   accuracy 0.9241
+gradient boosting + duration ratio AUC 0.9761 ± 0.0011   accuracy 0.9288</pre>
+<p>The tree ensembles are much better than the linear model (AUC 0.97 against 0.85). The boundaries between classes are clearly non-linear: false positives occur at both very small and very large radii. The engineered duration ratio helps every model, and helps the linear one the most, by 0.02 AUC. Gradient boosting with the duration ratio is our shortlist.</p>
+
+<h2 id="tune">Fine-Tune Your Model</h2>
+<h3 id="random">Randomized Search</h3>
+<p>Gradient boosting has several interacting hyperparameters, and some are best explored on a log scale. <code>RandomizedSearchCV</code> with continuous distributions covers the space more efficiently than a grid:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomizedSearchCV</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">randint</span><span class="p">,</span> <span class="n">loguniform</span>
+
+<span class="n">full_pipeline</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([(</span><span class="s2">"prep"</span><span class="p">,</span> <span class="n">make_preprocessing</span><span class="p">()),</span> <span class="p">(</span><span class="s2">"clf"</span><span class="p">,</span> <span class="n">HistGradientBoostingClassifier</span><span class="p">(</span><span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">))])</span>
+<span class="n">param_distribs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"clf__learning_rate"</span><span class="p">:</span> <span class="n">loguniform</span><span class="p">(</span><span class="mf">0.02</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">),</span>
+                  <span class="s2">"clf__max_leaf_nodes"</span><span class="p">:</span> <span class="n">randint</span><span class="p">(</span><span class="mi">8</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span>
+                  <span class="s2">"clf__min_samples_leaf"</span><span class="p">:</span> <span class="n">randint</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">80</span><span class="p">),</span>
+                  <span class="s2">"clf__l2_regularization"</span><span class="p">:</span> <span class="n">loguniform</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mi">10</span><span class="p">)}</span>
+<span class="n">rnd_search</span> <span class="o">=</span> <span class="n">RandomizedSearchCV</span><span class="p">(</span><span class="n">full_pipeline</span><span class="p">,</span> <span class="n">param_distribs</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">cv</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="s2">"roc_auc"</span><span class="p">,</span>
+                                <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">rnd_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"best CV AUC:"</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">rnd_search</span><span class="o">.</span><span class="n">best_score_</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">rnd_search</span><span class="o">.</span><span class="n">best_params_</span>
+</code></pre>
+<pre class="output">best CV AUC: 0.9766
+{&#x27;clf__l2_regularization&#x27;: np.float64(0.24400607090817547),
+ &#x27;clf__learning_rate&#x27;: np.float64(0.06689135590392836),
+ &#x27;clf__max_leaf_nodes&#x27;: 30,
+ &#x27;clf__min_samples_leaf&#x27;: 33}</pre>
+<h3 id="analyze">Analyze the Best Model</h3>
+<p><em>Permutation importance</em> measures how much the AUC drops when one feature's values are shuffled, which breaks its link with the label:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.inspection</span><span class="w"> </span><span class="kn">import</span> <span class="n">permutation_importance</span>
+
+<span class="n">final_model</span> <span class="o">=</span> <span class="n">rnd_search</span><span class="o">.</span><span class="n">best_estimator_</span>
+<span class="n">imp</span> <span class="o">=</span> <span class="n">permutation_importance</span><span class="p">(</span><span class="n">final_model</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">scoring</span><span class="o">=</span><span class="s2">"roc_auc"</span><span class="p">,</span> <span class="n">n_repeats</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">imp</span><span class="o">.</span><span class="n">importances_mean</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">X_train</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+</code></pre>
+<pre class="output">koi_prad         0.1766
+koi_period       0.1541
+koi_duration     0.0963
+koi_model_snr    0.0480
+koi_steff        0.0220
+koi_srad         0.0135
+koi_depth        0.0079
+koi_slogg        0.0074
+koi_kepmag       0.0022
+dtype: float64</pre>
+<p>The planet's radius, its period and its transit duration carry most of the information. The duration matters both alone and through our ratio, because the ratio is computed from the duration inside the pipeline. The stellar magnitude matters least.</p>
+
+<h3 id="test">Evaluate on the Test Set</h3>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">confusion_matrix</span><span class="p">,</span> <span class="n">precision_score</span><span class="p">,</span> <span class="n">recall_score</span><span class="p">,</span> <span class="n">roc_curve</span>
+
+<span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">test_set</span><span class="p">[</span><span class="n">TRANSIT_FEATURES</span> <span class="o">+</span> <span class="n">STAR_FEATURES</span><span class="p">],</span> <span class="n">test_set</span><span class="p">[</span><span class="s2">"is_planet"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">p_test</span> <span class="o">=</span> <span class="n">final_model</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">X_test</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"test ROC AUC:"</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">roc_auc_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">p_test</span><span class="p">),</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">y_pred</span> <span class="o">=</span> <span class="p">(</span><span class="n">p_test</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"precision:"</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">precision_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">),</span> <span class="mi">3</span><span class="p">),</span> <span class="s2">" recall:"</span><span class="p">,</span> <span class="nb">round</span><span class="p">(</span><span class="n">recall_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">),</span> <span class="mi">3</span><span class="p">))</span>
+<span class="n">confusion_matrix</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">y_pred</span><span class="p">)</span>
+</code></pre>
+<pre class="output">test ROC AUC: 0.9693
+precision: 0.874  recall: 0.896
+array([[897,  71],
+       [ 57, 491]])</pre>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">precision_recall_curve</span>
+<span class="n">prec</span><span class="p">,</span> <span class="n">rec</span><span class="p">,</span> <span class="n">thr</span> <span class="o">=</span> <span class="n">precision_recall_curve</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">p_test</span><span class="p">)</span>
+<span class="n">i95</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">prec</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.95</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">))</span>
+<span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">roc_curve</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span> <span class="n">p_test</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">fpr</span><span class="p">,</span> <span class="n">tpr</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span> <span class="s2">"k:"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"false positive rate"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"true positive rate (recall)"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"ROC curve (AUC = </span><span class="si">{</span><span class="n">roc_auc_score</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span><span class="w"> </span><span class="n">p_test</span><span class="p">)</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">thr</span><span class="p">,</span> <span class="n">prec</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">"precision"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">thr</span><span class="p">,</span> <span class="n">rec</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">label</span><span class="o">=</span><span class="s2">"recall"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">thr</span><span class="p">[</span><span class="n">i95</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">":"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"threshold"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"roc_precision_recall_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"threshold for 95% precision: </span><span class="si">{</span><span class="n">thr</span><span class="p">[</span><span class="n">i95</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> -&gt; recall </span><span class="si">{</span><span class="n">rec</span><span class="p">[</span><span class="n">i95</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">Saving figure roc_precision_recall_plot
+threshold for 95% precision: 0.86 -&gt; recall 0.75</pre>
+<figure id="fig-roc"><img src="images/roc_precision_recall_plot.png" alt="ROC and precision-recall"><figcaption><b>Figure 5-7.</b> ROC curve (left), and precision and recall against the decision threshold (right). The dotted line marks 95% precision.</figcaption></figure>
+<p>A test AUC of 0.969, close to cross-validation. At the default threshold, 87% of the "planet" verdicts are right, and 90% of the real planets are found. If follow-up time is precious, a threshold around 0.86 gives 95% precision at the price of 75% recall. That's a business decision, not a modeling one.</p>
+
+<h2 id="launch">Launch: Hunt for Planets Around Kepler-90</h2>
+<p>Time to put the two components together, on a star the classifier has never seen.</p>
+<h3 id="bls">The Transit Search</h3>
+<p>The <em>Box Least Squares</em> (BLS) algorithm (Kovács et al. 2002) tests every trial period, duration and phase. For each combination, it fits a box-shaped dip to the folded light curve and measures how much better the fit is than a flat line. The best period stands out as a peak in the "BLS periodogram". A star may have several planets, so we "peel" them. Find the strongest signal, mask its transits, and search again:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">astropy.timeseries</span><span class="w"> </span><span class="kn">import</span> <span class="n">BoxLeastSquares</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">search_transits</span><span class="p">(</span><span class="n">lc</span><span class="p">,</span> <span class="n">n_signals</span><span class="o">=</span><span class="mi">9</span><span class="p">,</span> <span class="n">min_period</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">max_period</span><span class="o">=</span><span class="mf">400.0</span><span class="p">,</span> <span class="n">n_periods</span><span class="o">=</span><span class="mi">20000</span><span class="p">,</span>
+                    <span class="n">durations</span><span class="o">=</span><span class="p">(</span><span class="mf">0.08</span><span class="p">,</span> <span class="mf">0.12</span><span class="p">,</span> <span class="mf">0.2</span><span class="p">,</span> <span class="mf">0.3</span><span class="p">,</span> <span class="mf">0.45</span><span class="p">,</span> <span class="mf">0.6</span><span class="p">),</span> <span class="n">mask_factor</span><span class="o">=</span><span class="mf">1.5</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Box Least Squares search: find the strongest periodic dip, record it, mask its</span>
+<span class="sd">    transits, search again (iterative 'peeling')."""</span>
+    <span class="n">t</span><span class="p">,</span> <span class="n">f</span> <span class="o">=</span> <span class="n">lc</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">lc</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">periods</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">min_period</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">max_period</span><span class="p">),</span> <span class="n">n_periods</span><span class="p">))</span>
+    <span class="n">keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="nb">bool</span><span class="p">)</span>
+    <span class="n">noise</span> <span class="o">=</span> <span class="mf">1.4826</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">f</span> <span class="o">-</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="n">found</span><span class="p">,</span> <span class="n">spectra</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n_signals</span><span class="p">):</span>
+        <span class="n">bls</span> <span class="o">=</span> <span class="n">BoxLeastSquares</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">keep</span><span class="p">],</span> <span class="n">f</span><span class="p">[</span><span class="n">keep</span><span class="p">])</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">bls</span><span class="o">.</span><span class="n">power</span><span class="p">(</span><span class="n">periods</span><span class="p">,</span> <span class="nb">list</span><span class="p">(</span><span class="n">durations</span><span class="p">),</span> <span class="n">objective</span><span class="o">=</span><span class="s2">"likelihood"</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">power</span><span class="p">)</span>
+        <span class="n">P</span><span class="p">,</span> <span class="n">t0</span><span class="p">,</span> <span class="n">dur</span><span class="p">,</span> <span class="n">depth</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">period</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">transit_time</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">duration</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">res</span><span class="o">.</span><span class="n">depth</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">phase</span> <span class="o">=</span> <span class="p">((</span><span class="n">t</span> <span class="o">-</span> <span class="n">t0</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">P</span><span class="p">)</span> <span class="o">%</span> <span class="n">P</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">P</span>
+        <span class="n">in_transit</span> <span class="o">=</span> <span class="n">keep</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">phase</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">dur</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="n">epochs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">((</span><span class="n">t</span><span class="p">[</span><span class="n">in_transit</span><span class="p">]</span> <span class="o">-</span> <span class="n">t0</span><span class="p">)</span> <span class="o">/</span> <span class="n">P</span><span class="p">))</span>
+        <span class="n">found</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"period"</span><span class="p">:</span> <span class="n">P</span><span class="p">,</span> <span class="s2">"t0"</span><span class="p">:</span> <span class="n">t0</span><span class="p">,</span> <span class="s2">"duration_h"</span><span class="p">:</span> <span class="n">dur</span> <span class="o">*</span> <span class="mi">24</span><span class="p">,</span> <span class="s2">"depth_ppm"</span><span class="p">:</span> <span class="n">depth</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span>
+                      <span class="s2">"snr"</span><span class="p">:</span> <span class="n">depth</span> <span class="o">/</span> <span class="n">noise</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">in_transit</span><span class="o">.</span><span class="n">sum</span><span class="p">()),</span> <span class="s2">"n_transits"</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">epochs</span><span class="p">)})</span>
+        <span class="n">spectra</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">power</span><span class="p">)</span>
+        <span class="n">keep</span> <span class="o">&amp;=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">phase</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">mask_factor</span> <span class="o">*</span> <span class="n">dur</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">found</span><span class="p">),</span> <span class="n">periods</span><span class="p">,</span> <span class="n">spectra</span>
+
+<span class="n">signals</span><span class="p">,</span> <span class="n">periods</span><span class="p">,</span> <span class="n">spectra</span> <span class="o">=</span> <span class="n">search_transits</span><span class="p">(</span><span class="n">detrended</span><span class="p">)</span>
+<span class="n">signals</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>period</th>
+      <th>t0</th>
+      <th>duration_h</th>
+      <th>depth_ppm</th>
+      <th>snr</th>
+      <th>n_transits</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>331.598</td>
+      <td>140.488</td>
+      <td>10.752</td>
+      <td>5632.421</td>
+      <td>234.645</td>
+      <td>3</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>210.618</td>
+      <td>147.008</td>
+      <td>10.752</td>
+      <td>2769.404</td>
+      <td>160.921</td>
+      <td>6</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>311.939</td>
+      <td>163.992</td>
+      <td>10.752</td>
+      <td>3561.066</td>
+      <td>93.827</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>59.739</td>
+      <td>158.944</td>
+      <td>7.296</td>
+      <td>408.176</td>
+      <td>33.068</td>
+      <td>15</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>91.935</td>
+      <td>134.352</td>
+      <td>7.296</td>
+      <td>349.443</td>
+      <td>24.984</td>
+      <td>12</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>124.906</td>
+      <td>254.728</td>
+      <td>7.296</td>
+      <td>363.845</td>
+      <td>14.739</td>
+      <td>6</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7.008</td>
+      <td>137.700</td>
+      <td>2.880</td>
+      <td>90.890</td>
+      <td>14.332</td>
+      <td>150</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8.721</td>
+      <td>139.460</td>
+      <td>4.800</td>
+      <td>70.812</td>
+      <td>12.072</td>
+      <td>113</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>264.234</td>
+      <td>279.048</td>
+      <td>7.296</td>
+      <td>470.467</td>
+      <td>8.357</td>
+      <td>2</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">8</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">,</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">)):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">periods</span><span class="p">,</span> <span class="n">spectra</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="s2">"k-"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">signals</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">k</span><span class="p">,</span> <span class="s2">"period"</span><span class="p">],</span> <span class="n">color</span><span class="o">=</span><span class="s2">"r"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"BLS power"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"search #</span><span class="si">{</span><span class="n">k</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">: peak at </span><span class="si">{</span><span class="n">signals</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="s1">'period'</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> d"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">"log"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"trial period (days)"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"bls_periodograms_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-bls"><img src="images/bls_periodograms_plot.png" alt="BLS periodograms"><figcaption><b>Figure 5-8.</b> BLS periodograms for three of the nine successive searches. The red line marks each search's winning period.</figcaption></figure>
+<p>Each search produces a clear winner. The background power rises toward long periods because few transits fit in four years at those periods, a known bias of this objective. Now let's "fold" the light curve on each period, stacking all transits on top of each other (<a href="#fig-fold">Figure 5-9</a>):</p>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">9</span><span class="p">))</span>
+<span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="p">(</span><span class="n">k</span><span class="p">,</span> <span class="n">row</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">signals</span><span class="o">.</span><span class="n">iterrows</span><span class="p">()):</span>
+    <span class="n">P</span><span class="p">,</span> <span class="n">t0</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">"period"</span><span class="p">],</span> <span class="n">row</span><span class="p">[</span><span class="s2">"t0"</span><span class="p">]</span>
+    <span class="n">ph</span> <span class="o">=</span> <span class="p">(((</span><span class="n">detrended</span><span class="p">[</span><span class="s2">"time"</span><span class="p">]</span> <span class="o">-</span> <span class="n">t0</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">P</span><span class="p">)</span> <span class="o">%</span> <span class="n">P</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">P</span><span class="p">)</span> <span class="o">*</span> <span class="mi">24</span>
+    <span class="n">sel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">ph</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">row</span><span class="p">[</span><span class="s2">"duration_h"</span><span class="p">]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">ph</span><span class="p">[</span><span class="n">sel</span><span class="p">],</span> <span class="p">(</span><span class="n">detrended</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">][</span><span class="n">sel</span><span class="p">]</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span> <span class="s2">"k."</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.5</span><span class="p">)</span>
+    <span class="n">bins</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="o">-</span><span class="mi">3</span> <span class="o">*</span> <span class="n">row</span><span class="p">[</span><span class="s2">"duration_h"</span><span class="p">],</span> <span class="mi">3</span> <span class="o">*</span> <span class="n">row</span><span class="p">[</span><span class="s2">"duration_h"</span><span class="p">],</span> <span class="mi">50</span><span class="p">)</span>
+    <span class="n">which</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">digitize</span><span class="p">(</span><span class="n">ph</span><span class="p">[</span><span class="n">sel</span><span class="p">],</span> <span class="n">bins</span><span class="p">)</span>
+    <span class="n">med</span> <span class="o">=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">detrended</span><span class="p">[</span><span class="s2">"flux"</span><span class="p">][</span><span class="n">sel</span><span class="p">][</span><span class="n">which</span> <span class="o">==</span> <span class="n">j</span><span class="p">])</span> <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">bins</span><span class="p">))]</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">bins</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">+</span> <span class="n">bins</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">med</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="mf">1e6</span><span class="p">,</span> <span class="s2">"r-"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mf">2.2</span> <span class="o">*</span> <span class="n">row</span><span class="p">[</span><span class="s2">"depth_ppm"</span><span class="p">],</span> <span class="mf">1.0</span> <span class="o">*</span> <span class="n">row</span><span class="p">[</span><span class="s2">"depth_ppm"</span><span class="p">])</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="sa">f</span><span class="s2">"P = </span><span class="si">{</span><span class="n">P</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> d, depth </span><span class="si">{</span><span class="n">row</span><span class="p">[</span><span class="s1">'depth_ppm'</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> ppm"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"hours from mid-transit"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"folded_transits_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-fold"><img src="images/folded_transits_plot.png" alt="Folded transits"><figcaption><b>Figure 5-9.</b> The light curve folded on each detected period (red: binned median)</figcaption></figure>
+<p>Most panels show a clean transit, including two only 70–90 ppm deep, smaller than the noise of a single measurement. Let's compare with the planets astronomers already know:</p>
+<pre class="code"><code><span class="n">known</span> <span class="o">=</span> <span class="n">koi</span><span class="p">[</span><span class="n">koi</span><span class="p">[</span><span class="s2">"kepid"</span><span class="p">]</span> <span class="o">==</span> <span class="n">KEPLER90_KIC</span><span class="p">][[</span><span class="s2">"kepoi_name"</span><span class="p">,</span> <span class="s2">"kepler_name"</span><span class="p">,</span> <span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"koi_depth"</span><span class="p">,</span>
+                                          <span class="s2">"koi_duration"</span><span class="p">,</span> <span class="s2">"koi_model_snr"</span><span class="p">,</span> <span class="s2">"koi_prad"</span><span class="p">]]</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">match</span><span class="p">(</span><span class="n">P</span><span class="p">):</span>
+    <span class="n">rel</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">known</span><span class="p">[</span><span class="s2">"koi_period"</span><span class="p">]</span> <span class="o">/</span> <span class="n">P</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">known</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">rel</span><span class="o">.</span><span class="n">argmin</span><span class="p">()][</span><span class="s2">"kepler_name"</span><span class="p">]</span> <span class="k">if</span> <span class="n">rel</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">&lt;</span> <span class="mf">0.002</span> <span class="k">else</span> <span class="s2">"—"</span>
+<span class="n">signals</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">]</span> <span class="o">=</span> <span class="n">signals</span><span class="p">[</span><span class="s2">"period"</span><span class="p">]</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="n">match</span><span class="p">)</span>
+<span class="n">signals</span><span class="p">[[</span><span class="s2">"period"</span><span class="p">,</span> <span class="s2">"depth_ppm"</span><span class="p">,</span> <span class="s2">"duration_h"</span><span class="p">,</span> <span class="s2">"snr"</span><span class="p">,</span> <span class="s2">"n_transits"</span><span class="p">,</span> <span class="s2">"matches"</span><span class="p">]]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>period</th>
+      <th>depth_ppm</th>
+      <th>duration_h</th>
+      <th>snr</th>
+      <th>n_transits</th>
+      <th>matches</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>331.60</td>
+      <td>5632.42</td>
+      <td>10.75</td>
+      <td>234.65</td>
+      <td>3</td>
+      <td>Kepler-90 h</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>210.62</td>
+      <td>2769.40</td>
+      <td>10.75</td>
+      <td>160.92</td>
+      <td>6</td>
+      <td>Kepler-90 g</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>311.94</td>
+      <td>3561.07</td>
+      <td>10.75</td>
+      <td>93.83</td>
+      <td>1</td>
+      <td>—</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>59.74</td>
+      <td>408.18</td>
+      <td>7.30</td>
+      <td>33.07</td>
+      <td>15</td>
+      <td>Kepler-90 d</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>91.94</td>
+      <td>349.44</td>
+      <td>7.30</td>
+      <td>24.98</td>
+      <td>12</td>
+      <td>Kepler-90 e</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>124.91</td>
+      <td>363.85</td>
+      <td>7.30</td>
+      <td>14.74</td>
+      <td>6</td>
+      <td>Kepler-90 f</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7.01</td>
+      <td>90.89</td>
+      <td>2.88</td>
+      <td>14.33</td>
+      <td>150</td>
+      <td>Kepler-90 b</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8.72</td>
+      <td>70.81</td>
+      <td>4.80</td>
+      <td>12.07</td>
+      <td>113</td>
+      <td>Kepler-90 c</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>264.23</td>
+      <td>470.47</td>
+      <td>7.30</td>
+      <td>8.36</td>
+      <td>2</td>
+      <td>—</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p><b>Our search recovered seven of Kepler-90's eight known planets</b>, from 7 days to 331 days, with no prior knowledge of the system. Two signals don't match anything. The one at 264 days has only two noisy dips. The one at 312 days is a single event at \(t \approx 164\) days, at the very end of quarter 1. It's an artifact of the running median near the edge of a data gap, a reminder that every preprocessing step leaves fingerprints. The eighth planet, Kepler-90i (14.4 days, 1.3 Earth radii), was not found. Its signal is so weak that it went unnoticed until 2017, when Google researchers found it with a neural network trained on Kepler light curves.<sup class="fn"><a href="#fn2" id="r2">2</a></sup></p>
+
+<h3 id="vetting">Vetting the Detections</h3>
+<p>Before trusting the classifier on our detections, a good engineer checks <em>training/serving skew</em>: are the features computed the same way?</p>
+<pre class="code"><code><span class="c1"># Do our features look like the catalogue's? (training/serving skew check)</span>
+<span class="n">both</span> <span class="o">=</span> <span class="n">signals</span><span class="p">[</span><span class="n">signals</span><span class="p">[</span><span class="s2">"matches"</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">"—"</span><span class="p">]</span><span class="o">.</span><span class="n">merge</span><span class="p">(</span><span class="n">known</span><span class="p">,</span> <span class="n">left_on</span><span class="o">=</span><span class="s2">"matches"</span><span class="p">,</span> <span class="n">right_on</span><span class="o">=</span><span class="s2">"kepler_name"</span><span class="p">)</span>
+<span class="n">both</span><span class="p">[[</span><span class="s2">"matches"</span><span class="p">,</span> <span class="s2">"period"</span><span class="p">,</span> <span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"depth_ppm"</span><span class="p">,</span> <span class="s2">"koi_depth"</span><span class="p">,</span> <span class="s2">"duration_h"</span><span class="p">,</span> <span class="s2">"koi_duration"</span><span class="p">,</span>
+      <span class="s2">"snr"</span><span class="p">,</span> <span class="s2">"koi_model_snr"</span><span class="p">]]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>matches</th>
+      <th>period</th>
+      <th>koi_period</th>
+      <th>depth_ppm</th>
+      <th>koi_depth</th>
+      <th>duration_h</th>
+      <th>koi_duration</th>
+      <th>snr</th>
+      <th>koi_model_snr</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>Kepler-90 h</td>
+      <td>331.6</td>
+      <td>331.6</td>
+      <td>5632.4</td>
+      <td>8322.1</td>
+      <td>10.8</td>
+      <td>14.4</td>
+      <td>234.6</td>
+      <td>355.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>Kepler-90 g</td>
+      <td>210.6</td>
+      <td>210.6</td>
+      <td>2769.4</td>
+      <td>4159.3</td>
+      <td>10.8</td>
+      <td>12.0</td>
+      <td>160.9</td>
+      <td>232.4</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>Kepler-90 d</td>
+      <td>59.7</td>
+      <td>59.7</td>
+      <td>408.2</td>
+      <td>566.4</td>
+      <td>7.3</td>
+      <td>8.0</td>
+      <td>33.1</td>
+      <td>43.5</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>Kepler-90 e</td>
+      <td>91.9</td>
+      <td>91.9</td>
+      <td>349.4</td>
+      <td>482.9</td>
+      <td>7.3</td>
+      <td>9.2</td>
+      <td>25.0</td>
+      <td>34.4</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>Kepler-90 f</td>
+      <td>124.9</td>
+      <td>124.9</td>
+      <td>363.8</td>
+      <td>498.7</td>
+      <td>7.3</td>
+      <td>11.9</td>
+      <td>14.7</td>
+      <td>24.4</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>Kepler-90 b</td>
+      <td>7.0</td>
+      <td>7.0</td>
+      <td>90.9</td>
+      <td>116.4</td>
+      <td>2.9</td>
+      <td>3.8</td>
+      <td>14.3</td>
+      <td>19.2</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>Kepler-90 c</td>
+      <td>8.7</td>
+      <td>8.7</td>
+      <td>70.8</td>
+      <td>160.4</td>
+      <td>4.8</td>
+      <td>3.7</td>
+      <td>12.1</td>
+      <td>22.7</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>Periods agree perfectly. Durations and depths are systematically smaller than the catalog's, by about 30%. A box is a crude model of a U-shaped transit, and the one-day running median eats part of the long transits. The SNR is also computed differently. This skew pushes the inputs toward "smaller planets", a region the classifier associates with planets, so it is not catastrophic here. In production you would fix it, by matching the catalog's feature definitions or by retraining on features computed with your own pipeline. Now the verdicts:</p>
+<pre class="code"><code><span class="n">star</span> <span class="o">=</span> <span class="n">koi</span><span class="p">[</span><span class="n">koi</span><span class="p">[</span><span class="s2">"kepid"</span><span class="p">]</span> <span class="o">==</span> <span class="n">KEPLER90_KIC</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">detections</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+    <span class="s2">"koi_period"</span><span class="p">:</span> <span class="n">signals</span><span class="p">[</span><span class="s2">"period"</span><span class="p">],</span> <span class="s2">"koi_duration"</span><span class="p">:</span> <span class="n">signals</span><span class="p">[</span><span class="s2">"duration_h"</span><span class="p">],</span>
+    <span class="s2">"koi_depth"</span><span class="p">:</span> <span class="n">signals</span><span class="p">[</span><span class="s2">"depth_ppm"</span><span class="p">],</span>
+    <span class="s2">"koi_prad"</span><span class="p">:</span> <span class="mf">109.2</span> <span class="o">*</span> <span class="n">star</span><span class="p">[</span><span class="s2">"koi_srad"</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">signals</span><span class="p">[</span><span class="s2">"depth_ppm"</span><span class="p">]</span> <span class="o">/</span> <span class="mf">1e6</span><span class="p">),</span>
+    <span class="s2">"koi_model_snr"</span><span class="p">:</span> <span class="n">signals</span><span class="p">[</span><span class="s2">"snr"</span><span class="p">],</span>
+    <span class="s2">"koi_steff"</span><span class="p">:</span> <span class="n">star</span><span class="p">[</span><span class="s2">"koi_steff"</span><span class="p">],</span> <span class="s2">"koi_slogg"</span><span class="p">:</span> <span class="n">star</span><span class="p">[</span><span class="s2">"koi_slogg"</span><span class="p">],</span>
+    <span class="s2">"koi_srad"</span><span class="p">:</span> <span class="n">star</span><span class="p">[</span><span class="s2">"koi_srad"</span><span class="p">],</span> <span class="s2">"koi_kepmag"</span><span class="p">:</span> <span class="n">star</span><span class="p">[</span><span class="s2">"koi_kepmag"</span><span class="p">]})</span>
+<span class="n">signals</span><span class="p">[</span><span class="s2">"p_planet"</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_model</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">detections</span><span class="p">)[:,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="n">signals</span><span class="p">[</span><span class="s2">"radius_earth"</span><span class="p">]</span> <span class="o">=</span> <span class="n">detections</span><span class="p">[</span><span class="s2">"koi_prad"</span><span class="p">]</span>
+<span class="c1"># A guard rail from the Kepler pipeline itself: a period needs at least 3 transits.</span>
+<span class="c1"># (The training set never contains fewer, so the model has no idea what to do with them.)</span>
+<span class="n">signals</span><span class="p">[</span><span class="s2">"planet"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">signals</span><span class="p">[</span><span class="s2">"p_planet"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mf">0.5</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">signals</span><span class="p">[</span><span class="s2">"n_transits"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">)</span>
+<span class="n">signals</span><span class="p">[[</span><span class="s2">"period"</span><span class="p">,</span> <span class="s2">"radius_earth"</span><span class="p">,</span> <span class="s2">"n_transits"</span><span class="p">,</span> <span class="s2">"matches"</span><span class="p">,</span> <span class="s2">"p_planet"</span><span class="p">,</span> <span class="s2">"planet"</span><span class="p">]]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>period</th>
+      <th>radius_earth</th>
+      <th>n_transits</th>
+      <th>matches</th>
+      <th>p_planet</th>
+      <th>planet</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>331.598</td>
+      <td>9.834</td>
+      <td>3</td>
+      <td>Kepler-90 h</td>
+      <td>0.796</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>210.618</td>
+      <td>6.896</td>
+      <td>6</td>
+      <td>Kepler-90 g</td>
+      <td>0.948</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>311.939</td>
+      <td>7.820</td>
+      <td>1</td>
+      <td>—</td>
+      <td>0.796</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>59.739</td>
+      <td>2.647</td>
+      <td>15</td>
+      <td>Kepler-90 d</td>
+      <td>0.987</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>91.935</td>
+      <td>2.450</td>
+      <td>12</td>
+      <td>Kepler-90 e</td>
+      <td>0.985</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>124.906</td>
+      <td>2.500</td>
+      <td>6</td>
+      <td>Kepler-90 f</td>
+      <td>0.970</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>7.008</td>
+      <td>1.249</td>
+      <td>150</td>
+      <td>Kepler-90 b</td>
+      <td>0.951</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>8.721</td>
+      <td>1.103</td>
+      <td>113</td>
+      <td>Kepler-90 c</td>
+      <td>0.972</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <th>8</th>
+      <td>264.234</td>
+      <td>2.842</td>
+      <td>2</td>
+      <td>—</td>
+      <td>0.036</td>
+      <td>False</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>All seven real planets get high probabilities, and the noisy 264-day signal is rejected. But the 312-day artifact gets 0.80! The model has never seen a single-transit signal: NASA's pipeline requires at least three transits, so there are none in the training data. This is an <em>out-of-distribution</em> input, and ML models are notoriously over-confident on those. The fix is a simple guard rail in front of the model, the same three-transit rule. Here is the system our pipeline found (<a href="#fig-system">Figure 5-10</a>):</p>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">real</span> <span class="o">=</span> <span class="n">signals</span><span class="p">[</span><span class="n">signals</span><span class="p">[</span><span class="s2">"planet"</span><span class="p">]]</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"period"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">real</span><span class="p">[</span><span class="s2">"period"</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">real</span><span class="p">)),</span> <span class="n">s</span><span class="o">=</span><span class="mi">40</span> <span class="o">*</span> <span class="n">real</span><span class="p">[</span><span class="s2">"radius_earth"</span><span class="p">]</span> <span class="o">**</span> <span class="mf">1.3</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="s2">"tab:orange"</span><span class="p">,</span>
+           <span class="n">edgecolor</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">zorder</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">r</span> <span class="ow">in</span> <span class="n">real</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">annotate</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'period'</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> d</span><span class="se">\n</span><span class="si">{</span><span class="n">r</span><span class="p">[</span><span class="s1">'radius_earth'</span><span class="p">]</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> R⊕"</span><span class="p">,</span> <span class="p">(</span><span class="n">r</span><span class="p">[</span><span class="s2">"period"</span><span class="p">],</span> <span class="mi">0</span><span class="p">),</span> <span class="n">xytext</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">22</span><span class="p">),</span>
+                <span class="n">textcoords</span><span class="o">=</span><span class="s2">"offset points"</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">"center"</span><span class="p">,</span> <span class="n">fontsize</span><span class="o">=</span><span class="mi">9</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">"log"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([]);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"orbital period (days)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"The Kepler-90 system, as found by our pipeline"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="s2">"x"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"kepler90_system_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-system"><img src="images/kepler90_system_plot.png" alt="The Kepler-90 system"><figcaption><b>Figure 5-10.</b> The seven planets of Kepler-90 found and vetted by our pipeline (marker size ∝ radius)</figcaption></figure>
+<p>Two Earth-sized planets close in, three sub-Neptunes, and two giants on the outside: a miniature of our own Solar System's layout, packed within about the Earth's distance from the Sun.</p>
+
+<h2 id="monitor">Monitor and Maintain</h2>
+<p>Production data for this model are the 1,977 KOIs still labeled "candidate". Let's run the model on them:</p>
+<pre class="code"><code><span class="c1"># Monitoring the model on the still-unlabeled CANDIDATES (the 'production' traffic)</span>
+<span class="n">cands</span> <span class="o">=</span> <span class="n">koi</span><span class="p">[</span><span class="n">koi</span><span class="p">[</span><span class="s2">"koi_disposition"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"CANDIDATE"</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">cands</span><span class="p">[</span><span class="s2">"p_planet"</span><span class="p">]</span> <span class="o">=</span> <span class="n">final_model</span><span class="o">.</span><span class="n">predict_proba</span><span class="p">(</span><span class="n">cands</span><span class="p">[</span><span class="n">TRANSIT_FEATURES</span> <span class="o">+</span> <span class="n">STAR_FEATURES</span><span class="p">])[:,</span> <span class="mi">1</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">cands</span><span class="p">)</span><span class="si">}</span><span class="s2"> candidates; </span><span class="si">{</span><span class="p">(</span><span class="n">cands</span><span class="p">[</span><span class="s1">'p_planet'</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">thr</span><span class="p">[</span><span class="n">i95</span><span class="p">])</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.0%</span><span class="si">}</span><span class="s2"> pass the 95%-precision threshold"</span><span class="p">)</span>
+<span class="n">cands</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"p_planet"</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)[[</span><span class="s2">"kepoi_name"</span><span class="p">,</span> <span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"koi_prad"</span><span class="p">,</span> <span class="s2">"koi_teq"</span><span class="p">,</span>
+                                                 <span class="s2">"p_planet"</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<pre class="output">1977 candidates; 15% pass the 95%-precision threshold</pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>kepoi_name</th>
+      <th>koi_period</th>
+      <th>koi_prad</th>
+      <th>koi_teq</th>
+      <th>p_planet</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>349</th>
+      <td>K00974.01</td>
+      <td>53.506</td>
+      <td>2.52</td>
+      <td>675.0</td>
+      <td>0.993</td>
+    </tr>
+    <tr>
+      <th>4424</th>
+      <td>K04526.01</td>
+      <td>30.539</td>
+      <td>2.72</td>
+      <td>669.0</td>
+      <td>0.989</td>
+    </tr>
+    <tr>
+      <th>1535</th>
+      <td>K01861.01</td>
+      <td>17.504</td>
+      <td>3.56</td>
+      <td>824.0</td>
+      <td>0.989</td>
+    </tr>
+    <tr>
+      <th>1496</th>
+      <td>K01856.01</td>
+      <td>46.299</td>
+      <td>4.33</td>
+      <td>592.0</td>
+      <td>0.988</td>
+    </tr>
+    <tr>
+      <th>3929</th>
+      <td>K02972.02</td>
+      <td>42.029</td>
+      <td>2.33</td>
+      <td>578.0</td>
+      <td>0.988</td>
+    </tr>
+    <tr>
+      <th>2847</th>
+      <td>K02972.01</td>
+      <td>13.251</td>
+      <td>1.98</td>
+      <td>850.0</td>
+      <td>0.987</td>
+    </tr>
+    <tr>
+      <th>1581</th>
+      <td>K01934.01</td>
+      <td>28.783</td>
+      <td>2.11</td>
+      <td>443.0</td>
+      <td>0.987</td>
+    </tr>
+    <tr>
+      <th>2403</th>
+      <td>K00268.01</td>
+      <td>110.378</td>
+      <td>3.02</td>
+      <td>473.0</td>
+      <td>0.987</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>About 15% pass the strict 95%-precision threshold. Those are good bets for follow-up observations. And because some candidates will eventually be confirmed or rejected, you can <em>monitor</em> the model: compare its predictions with each new disposition, and retrain when performance drifts. Finally, the question everybody asks:</p>
+<pre class="code"><code><span class="c1"># The fun part: small, temperate candidates the model believes in</span>
+<span class="n">hz</span> <span class="o">=</span> <span class="n">cands</span><span class="p">[(</span><span class="n">cands</span><span class="p">[</span><span class="s2">"koi_prad"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="n">cands</span><span class="p">[</span><span class="s2">"koi_teq"</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="mi">180</span><span class="p">,</span> <span class="mi">320</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">cands</span><span class="p">[</span><span class="s2">"p_planet"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">)]</span>
+<span class="n">hz</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"p_planet"</span><span class="p">,</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)[[</span><span class="s2">"kepoi_name"</span><span class="p">,</span> <span class="s2">"koi_period"</span><span class="p">,</span> <span class="s2">"koi_prad"</span><span class="p">,</span> <span class="s2">"koi_teq"</span><span class="p">,</span>
+                                              <span class="s2">"koi_insol"</span><span class="p">,</span> <span class="s2">"p_planet"</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>kepoi_name</th>
+      <th>koi_period</th>
+      <th>koi_prad</th>
+      <th>koi_teq</th>
+      <th>koi_insol</th>
+      <th>p_planet</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>2769</th>
+      <td>K03034.01</td>
+      <td>31.02</td>
+      <td>1.66</td>
+      <td>291.0</td>
+      <td>1.70</td>
+      <td>0.97</td>
+    </tr>
+    <tr>
+      <th>2408</th>
+      <td>K02862.01</td>
+      <td>24.58</td>
+      <td>1.64</td>
+      <td>316.0</td>
+      <td>2.35</td>
+      <td>0.96</td>
+    </tr>
+    <tr>
+      <th>1776</th>
+      <td>K02124.01</td>
+      <td>42.34</td>
+      <td>1.45</td>
+      <td>311.0</td>
+      <td>2.21</td>
+      <td>0.94</td>
+    </tr>
+    <tr>
+      <th>6543</th>
+      <td>K05652.01</td>
+      <td>91.51</td>
+      <td>1.43</td>
+      <td>302.0</td>
+      <td>1.97</td>
+      <td>0.93</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>Small (under 2 Earth radii), temperate (equilibrium temperature 180–320 K, similar to the Earth's 255 K) and rated likely planets by the model. These are the kinds of worlds that next-generation telescopes will study for atmospheres. Treat them as a ranked to-do list, not as discoveries: our model is only as good as its features, and the training labels themselves come with uncertainties.</p>
+
+<h2 id="try">Try It Out!</h2>
+<p>The animation runs on the planets our pipeline found. Tab 1 shows how a transit produces its dip; play with the planet's size and orbit. Tab 2 shows Kepler-90's seven planets orbiting their star, with the predicted combined light curve. Tab 3 lets you fold the real light curve at any trial period and watch the transit appear only at the right one, which is the idea behind BLS. Full screen: <a href="animations/exoplanet_animation.html">animations/exoplanet_animation.html</a>.</p>
+<iframe class="anim" src="animations/exoplanet_animation.html" title="Exoplanet animation" loading="lazy"></iframe>
+
+<h2 id="exercises">Exercises</h2>
+<ol class="exercise">
+<li>Tune the detrending window (0.5, 1, 2, 3 days). How do the measured depths compare with the catalog? Does the 312-day artifact disappear?</li>
+<li>Search for Kepler-90i (14.45 days). Mask the seven planets and run BLS between 10 and 20 days with a finer grid. What signal-to-noise does it have? How many more years of data would you need for it to stand out?</li>
+<li>Add an "odd/even depth difference" feature to the detector: eclipsing binaries often have unequal alternate eclipses. Test it on a known false positive star.</li>
+<li>Replace the hand-made features with the light curve itself: build "global" and "local" folded views (as in the AstroNet paper) for a few hundred KOIs, and train a 1D convolutional network.</li>
+<li>Apply the full pipeline to another multi-planet star, for example Kepler-11 (KIC 6541920) or Kepler-62 (KIC 9002278).</li>
+<li>Calibrate the classifier's probabilities with <code>CalibratedClassifierCV</code> and plot a reliability diagram.</li>
+</ol>
+
+<hr class="end">
+<div class="footnotes">
+<p id="fn1"><a href="#r1">1</a> The Kepler mission (2009–2018) found over 2,700 confirmed planets. Its main legacy is statistical: planets are common, and most stars have them.</p>
+<p id="fn2"><a href="#r2">2</a> C. Shallue and A. Vanderburg, "Identifying Exoplanets with Deep Learning", <i>The Astronomical Journal</i> 155, 94 (2018).</p>
+<p><b>Data credits.</b> Kepler data from the Mikulski Archive for Space Telescopes (MAST), STScI. KOI cumulative table from the NASA Exoplanet Archive, operated by Caltech/IPAC under contract with NASA. BLS: astropy.timeseries.</p>
+</div>
+</main>
+</div>
+</body>
+</html>
