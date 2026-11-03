@@ -1,0 +1,16 @@
+# Astronomy × Machine Learning — End-to-End Projects with Real Data
+
+Three end-to-end Machine Learning projects, each written as a book chapter in the style of Chapter 2 ("End-to-End Machine Learning Project") of *Hands-On Machine Learning with Scikit-Learn and TensorFlow*. Each one follows the same eight steps — big picture, get the data, explore, prepare, train, fine-tune, present, launch — and each one rediscovers a real piece of astronomy from real data.
+
+| Chapter | Project | Main data |
+|---|---|---|
+| [1](01-rediscovering-keplers-laws/) | **Rediscovering Kepler's three laws** | Tycho Brahe's raw Mars observations (1582–1600), NASA/JPL Horizons, NASA fact sheets |
+
+Every chapter folder contains:
+
+* `index.html` — the guide (theory of the astronomy and of the ML, all the code with its real outputs, all the figures),
+* a Jupyter notebook that reproduces every number and figure,
+* `animations/` — classroom animations that run on the exact equations and fitted parameters of the chapter,
+* `datasets/` — cached copies of the data so everything runs offline.
+
+To read a guide, open its `index.html` in a browser (or enable GitHub Pages for the repository).
