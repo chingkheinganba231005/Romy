@@ -1,0 +1,1235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Pacemaker of the Ice Ages</title>
+<meta name="chapter" content="6">
+<meta name="description" content="An end-to-end machine learning project: rediscover the Milankovitch cycles that pace the ice ages, from 800,000 years of Antarctic ice-core data and the astronomical solution for the Earth's orbit.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Source+Sans+3:wght@300;400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+<style>/* Book-style layout for the end-to-end project guides */
+:root {
+  --bg: #fdfcf9;
+  --fg: #1d1d1f;
+  --muted: #5d5d66;
+  --rule: #d9d6cf;
+  --accent: #a3122a;          /* chapter red */
+  --accent-soft: #f6e8ea;
+  --code-bg: #f3f2ee;
+  --code-fg: #1d1d1f;
+  --out-bg: #ffffff;
+  --side-bg: #f1efe9;
+  --note: #2f5d8a;
+  --tip: #2f7a4f;
+  --warn: #a3122a;
+  --link: #1f5f99;
+  --toc-bg: #f6f4ef;
+  --tbl-stripe: #f5f3ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181b; --fg: #e8e6e1; --muted: #a3a3ab; --rule: #34353a;
+    --accent: #ff6b81; --accent-soft: #3a2228; --code-bg: #212226; --code-fg: #e8e6e1;
+    --out-bg: #1b1c20; --side-bg: #222328; --note: #7fb2e5; --tip: #78c99a; --warn: #ff6b81;
+    --link: #8cc0f2; --toc-bg: #1c1d21; --tbl-stripe: #1f2024;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181b; --fg: #e8e6e1; --muted: #a3a3ab; --rule: #34353a;
+  --accent: #ff6b81; --accent-soft: #3a2228; --code-bg: #212226; --code-fg: #e8e6e1;
+  --out-bg: #1b1c20; --side-bg: #222328; --note: #7fb2e5; --tip: #78c99a; --warn: #ff6b81;
+  --link: #8cc0f2; --toc-bg: #1c1d21; --tbl-stripe: #1f2024;
+}
+* { box-sizing: border-box; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  font-size: 18px; line-height: 1.62;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--link); }
+.layout { display: flex; max-width: 1280px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto;
+  width: 290px; flex: 0 0 290px; padding: 28px 18px 40px 22px; background: var(--toc-bg);
+  border-right: 1px solid var(--rule);
+  font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif; font-size: 14.5px; line-height: 1.4;
+}
+nav.toc .toc-title { font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; color: var(--accent); margin-bottom: 10px; }
+nav.toc ol { list-style: none; padding-left: 0; margin: 0; }
+nav.toc ol ol { padding-left: 14px; margin: 3px 0 8px; }
+nav.toc li { margin: 4px 0; }
+nav.toc a { color: var(--fg); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); }
+nav.toc ol ol a { color: var(--muted); }
+main { flex: 1 1 auto; min-width: 0; padding: 40px 56px 120px; max-width: 920px; }
+.theme-btn {
+  position: fixed; right: 16px; top: 12px; z-index: 5; font: 13px "Source Sans 3", Arial, sans-serif;
+  background: var(--side-bg); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 10px; cursor: pointer;
+}
+.toc-btn { display: none; }
+
+/* chapter opener */
+.chapter-opener { border-bottom: 2px solid var(--fg); padding-bottom: 18px; margin-bottom: 30px; }
+.chapter-label { font-family: "Source Sans 3", Arial, sans-serif; text-transform: uppercase; letter-spacing: .25em; color: var(--accent); font-weight: 700; font-size: 15px; text-align: right; }
+.chapter-number { font-family: "Source Sans 3", Arial, sans-serif; font-size: 84px; line-height: 1; font-weight: 300; text-align: right; color: var(--accent); }
+h1.chapter-title { font-family: "Source Sans 3", Arial, sans-serif; font-size: 44px; line-height: 1.12; margin: 8px 0 0; text-align: right; font-weight: 600; }
+.chapter-sub { text-align: right; color: var(--muted); font-style: italic; margin-top: 6px; }
+h2, h3, h4 { font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif; line-height: 1.25; }
+h2 { font-size: 31px; margin: 64px 0 14px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); font-weight: 600; }
+h3 { font-size: 23px; margin: 40px 0 10px; font-weight: 600; }
+h4 { font-size: 18.5px; margin: 28px 0 8px; font-weight: 700; }
+p { margin: 0 0 16px; }
+em.term, .term { font-style: italic; }
+ol.steps li, ul li { margin: 4px 0; }
+
+/* code */
+pre, code, kbd { font-family: "Source Code Pro", "SFMono-Regular", Menlo, Consolas, monospace; }
+p code, li code, td code { font-size: .86em; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+pre.code, pre.shell {
+  background: var(--code-bg); color: var(--code-fg); padding: 14px 16px; border-radius: 4px; overflow-x: auto;
+  font-size: 14.2px; line-height: 1.5; margin: 14px 0 6px; border-left: 3px solid var(--rule);
+}
+pre.output {
+  background: var(--out-bg); border: 1px dashed var(--rule); padding: 10px 14px; overflow-x: auto;
+  font-size: 13.6px; line-height: 1.45; margin: 4px 0 18px; color: var(--fg);
+}
+pre.output::before { content: "Output"; display: block; font: 600 10.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.dataframe-wrap { overflow-x: auto; margin: 6px 0 18px; }
+table { border-collapse: collapse; font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; }
+table.dataframe th, table.dataframe td, table.data th, table.data td { padding: 4px 10px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+table.dataframe tbody tr:nth-child(odd), table.data tbody tr:nth-child(odd) { background: var(--tbl-stripe); }
+table.data { margin: 10px 0 20px; width: 100%; }
+table.data th, table.data td { text-align: left; white-space: normal; vertical-align: top; }
+.table-caption { font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; margin-top: 18px; }
+.table-caption b { color: var(--accent); }
+
+/* pygments (default-ish, readable in both themes) */
+.k, .kn, .kd, .kc, .ow { color: #8a2be2; font-weight: 600; }
+.s, .s1, .s2, .sa, .sd, .si, .se { color: #2f7a4f; }
+.mi, .mf, .mh, .il { color: #b35c00; }
+.c, .c1, .cm { color: #7a7a85; font-style: italic; }
+.nf, .nc { color: #1f5f99; }
+.nb, .bp { color: #0e7c86; }
+.o { color: inherit; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .k, :root:not([data-theme="light"]) .kn, :root:not([data-theme="light"]) .kd, :root:not([data-theme="light"]) .kc, :root:not([data-theme="light"]) .ow { color: #c79bff; }
+  :root:not([data-theme="light"]) .s, :root:not([data-theme="light"]) .s1, :root:not([data-theme="light"]) .s2, :root:not([data-theme="light"]) .sa, :root:not([data-theme="light"]) .sd, :root:not([data-theme="light"]) .si { color: #8fd6a8; }
+  :root:not([data-theme="light"]) .mi, :root:not([data-theme="light"]) .mf { color: #ffb366; }
+  :root:not([data-theme="light"]) .nf, :root:not([data-theme="light"]) .nc { color: #8cc0f2; }
+  :root:not([data-theme="light"]) .nb, :root:not([data-theme="light"]) .bp { color: #6fd3dc; } }
+:root[data-theme="dark"] .k, :root[data-theme="dark"] .kn, :root[data-theme="dark"] .kd, :root[data-theme="dark"] .kc, :root[data-theme="dark"] .ow { color: #c79bff; }
+:root[data-theme="dark"] .s, :root[data-theme="dark"] .s1, :root[data-theme="dark"] .s2, :root[data-theme="dark"] .sa, :root[data-theme="dark"] .sd, :root[data-theme="dark"] .si { color: #8fd6a8; }
+:root[data-theme="dark"] .mi, :root[data-theme="dark"] .mf { color: #ffb366; }
+:root[data-theme="dark"] .nf, :root[data-theme="dark"] .nc { color: #8cc0f2; }
+:root[data-theme="dark"] .nb, :root[data-theme="dark"] .bp { color: #6fd3dc; }
+
+/* admonitions: tip / note / warning, like the book's margin animals */
+.admon { display: flex; gap: 14px; margin: 22px 0; padding: 12px 16px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-size: 16.5px; }
+.admon .icon { flex: 0 0 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0; color: #fff; margin-top: 3px; }
+.admon .icon::after { font: 700 11.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .06em; }
+.admon.tip .icon::after { content: "TIP"; }
+.admon.note .icon::after { content: "NOTE"; }
+.admon.warning .icon::after { content: "!"; font-size: 24px; }
+.admon.tip .icon { background: var(--tip); }
+.admon.note .icon { background: var(--note); }
+.admon.warning .icon { background: var(--warn); }
+.admon .body p:last-child { margin-bottom: 0; }
+.admon .body { min-width: 0; }
+
+/* sidebars (boxed asides with a title) */
+aside.sidebar { background: var(--side-bg); border: 1px solid var(--rule); padding: 16px 22px 8px; margin: 26px 0; font-size: 16.5px; border-radius: 3px; }
+aside.sidebar h5 { font-family: "Source Sans 3", Arial, sans-serif; font-size: 18px; text-align: center; margin: 0 0 10px; }
+
+/* figures & equations */
+figure { margin: 26px 0; text-align: center; }
+figure img { max-width: 100%; height: auto; border-radius: 2px; background: #fff; }
+figcaption, .eq-caption { font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; color: var(--fg); margin-top: 8px; text-align: left; }
+figcaption b, .eq-caption b { color: var(--accent); }
+.equation { margin: 22px 0; padding: 4px 0 8px; overflow-x: auto; }
+.equation .eq-caption { margin-bottom: 6px; }
+.katex-display { margin: .4em 0 !important; }
+.footnotes { font-size: 14.5px; border-top: 1px solid var(--rule); margin-top: 60px; padding-top: 10px; color: var(--muted); }
+sup.fn a { text-decoration: none; }
+.callout-list { counter-reset: c; }
+.checklist li::marker { color: var(--accent); font-weight: 700; }
+.exercise li { margin-bottom: 10px; }
+.big-picture { font-family: "Source Sans 3", Arial, sans-serif; }
+iframe.anim { width: 100%; height: 620px; border: 1px solid var(--rule); border-radius: 4px; background: #0b0d14; }
+.data-badge { display: inline-block; font: 700 11.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; color: #fff; background: var(--tip); vertical-align: middle; }
+.data-badge.nasa { background: var(--note); }
+.data-badge.sim { background: var(--warn); }
+hr.end { border: 0; border-top: 2px solid var(--fg); margin: 60px 0 10px; }
+
+@media (max-width: 980px) {
+  nav.toc { position: fixed; left: 0; top: 0; z-index: 10; transform: translateX(-100%); transition: transform .2s; box-shadow: 0 0 30px rgba(0,0,0,.25); }
+  nav.toc.open { transform: none; }
+  .toc-btn { display: block; position: fixed; left: 16px; top: 12px; z-index: 11; font: 13px "Source Sans 3", Arial, sans-serif; background: var(--side-bg); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  main { padding: 60px 16px 80px; }
+  body { font-size: 17px; }
+  h1.chapter-title { font-size: 32px; }
+  .chapter-number { font-size: 60px; }
+  h2 { font-size: 25px; }
+  h3 { font-size: 20px; }
+  pre.code, pre.shell { font-size: 12.8px; }
+  iframe.anim { height: 520px; }
+}
+nav.toc a.toc-home { display: inline-block; font-weight: 600; font-size: 13.5px; color: var(--accent); margin-bottom: 14px; }
+nav.toc a.toc-home:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<button class="toc-btn" onclick="document.querySelector('nav.toc').classList.toggle('open')">☰ Contents</button>
+<button class="theme-btn" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);r.setAttribute('data-theme',d?'light':'dark');})()">◐ Theme</button>
+<div class="layout">
+<nav class="toc" onclick="if(event.target.tagName==='A')this.classList.remove('open')">
+  <a class="toc-home" href="../index.html">← All chapters</a>
+  <div class="toc-title">Chapter 6 · Contents</div>
+  <ol>
+    <li><a href="#real-data">Working with Real Data</a></li>
+    <li><a href="#big-picture">Look at the Big Picture</a>
+      <ol><li><a href="#crash-course">A Crash Course in Paleoclimate</a></li><li><a href="#frame">Frame the Problem</a></li><li><a href="#measure">Select a Performance Measure</a></li><li><a href="#assumptions">Check the Assumptions</a></li></ol></li>
+    <li><a href="#get-data">Get the Data</a>
+      <ol><li><a href="#download">Download the Data</a></li><li><a href="#quick-look">Take a Quick Look at the Data Structure</a></li><li><a href="#test-set">Create a Test Set</a></li></ol></li>
+    <li><a href="#discover">Discover and Visualize the Data to Gain Insights</a>
+      <ol><li><a href="#viz">800,000 Years of Climate</a></li><li><a href="#correlations">Looking for Correlations</a></li><li><a href="#periods">Looking for Periodicities</a></li></ol></li>
+    <li><a href="#prepare">Prepare the Data for Machine Learning Algorithms</a>
+      <ol><li><a href="#insolation">Feature Engineering: Sunshine from Orbits</a></li><li><a href="#lags">Lag Features</a></li></ol></li>
+    <li><a href="#train">Select and Train a Model</a>
+      <ol><li><a href="#linear">A Linear Model</a></li><li><a href="#cv">Cross-Validation for Time Series</a></li><li><a href="#ice">An Ice-Sheet Model</a></li></ol></li>
+    <li><a href="#tune">Fine-Tune Your Model</a>
+      <ol><li><a href="#random">Randomized Search</a></li><li><a href="#analyze">Analyze the Best Models</a></li><li><a href="#test">Evaluate on the Test Set</a></li></ol></li>
+    <li><a href="#present">Present Your Solution</a></li>
+    <li><a href="#launch">Launch, Monitor, and Maintain</a></li>
+    <li><a href="#try">Try It Out!</a></li>
+    <li><a href="#exercises">Exercises</a></li>
+  </ol>
+</nav>
+<main>
+
+<div class="chapter-opener">
+  <div class="chapter-label">Chapter</div>
+  <div class="chapter-number">6</div>
+  <h1 class="chapter-title">The Pacemaker of the Ice Ages</h1>
+  <div class="chapter-sub">an end-to-end Machine Learning project with 800,000 years of real climate data</div>
+</div>
+
+<p>In this last chapter you will go through a sixth project end to end, pretending to be a recently hired data scientist at a paleoclimate lab. For the last million years, giant ice sheets have repeatedly spread over North America and Europe, then melted away. Each cycle took about 100,000 years. What drives them? In the 1920s, the Serbian engineer Milutin Milanković proposed an astronomical answer: slow, regular changes in the Earth's orbit change how much summer sunshine reaches the northern continents. Your job is to test that idea with real data, and to build a model that turns orbits into ice ages.<sup class="fn"><a href="#fn1" id="r1">1</a></sup> The steps are the same as always:</p>
+<ol class="steps">
+  <li>Look at the big picture.</li><li>Get the data.</li><li>Discover and visualize the data to gain insights.</li><li>Prepare the data for Machine Learning algorithms.</li><li>Select a model and train it.</li><li>Fine-tune your model.</li><li>Present your solution.</li><li>Launch, monitor, and maintain your system.</li>
+</ol>
+<p>This chapter is about <em>time series</em>. You will learn why random train/test splits are wrong for them, how to build lag features, and how to cross-validate with blocks of time. You will also see why a model that cannot be differentiated needs a randomized search. And you will meet two kinds of drift: the climate system changed its rules a million years ago, and today's atmosphere is outside anything in the training data.</p>
+
+<h2 id="real-data">Working with Real Data</h2>
+<table class="data">
+<thead><tr><th>Dataset</th><th>Kind</th><th>Content</th></tr></thead>
+<tbody>
+<tr><td>EPICA Dome C ice core: deuterium and temperature (Jouzel et al. 2007)</td><td><span class="data-badge">real measurements</span></td><td>5,785 samples of Antarctic ice from 3.2 km of core, covering 800,000 years</td></tr>
+<tr><td>Antarctic CO₂ composite (Bereiter et al. 2015)</td><td><span class="data-badge">real measurements</span></td><td>Air bubbles trapped in the ice: atmospheric CO₂ over 800,000 years</td></tr>
+<tr><td>LR04 benthic δ¹⁸O stack (Lisiecki &amp; Raymo 2005)</td><td><span class="data-badge">real measurements</span></td><td>57 deep-sea sediment cores combined: global ice volume over 5.3 million years</td></tr>
+<tr><td>La2004 orbital solution (Laskar et al. 2004)</td><td><span class="data-badge nasa">astronomical model</span></td><td>The Earth's eccentricity, obliquity and perihelion every 1,000 years, from a numerical integration of the solar system</td></tr>
+</tbody></table>
+<p>The climate records are physical measurements made in laboratories on ice and mud, distributed by the NOAA World Data Service for Paleoclimatology. The orbital solution is to the Earth what NASA's ephemerides were to Uranus in Chapter 3: a model of gravity, integrated millions of years into the past and future.</p>
+<div class="admon note"><div class="icon">Note</div><div class="body"><p>The notebook <code>ice_ages_project.ipynb</code> runs in about a minute. All the data are cached in <code>datasets/</code>. The orbital solution is trimmed to ±6 million years.</p></div></div>
+
+<h2 id="big-picture">Look at the Big Picture</h2>
+<aside class="sidebar" id="crash-course"><h5>A Crash Course in Paleoclimate</h5>
+<p><b>Thermometers in the ice.</b> Snow that falls on Antarctica keeps a chemical record of the temperature. Water molecules containing the heavy hydrogen isotope deuterium condense more easily, so colder air delivers snow with less deuterium. Layer after layer, the snow becomes ice, and a 3 km core is a temperature record going back 800,000 years. The air bubbles in it are samples of the ancient atmosphere.</p>
+<p><b>Ice volume in the mud.</b> When ice sheets grow on land, they lock up water rich in the light oxygen isotope ¹⁶O. The ocean becomes richer in ¹⁸O, and so do the shells of tiny bottom-dwelling animals (benthic foraminifera). Their δ¹⁸O, the relative excess of ¹⁸O, measured in sea-floor sediments, tracks global ice volume.</p>
+<p><b>The Milankovitch cycles.</b> The Earth's orbit is perturbed by the other planets (Chapter 3 again). Three quantities change slowly:</p>
+<ul>
+<li><em>Eccentricity</em> \(e\), the ovalness of the orbit (Chapter 1), varies between about 0 and 0.06 with periods near 100,000 and 405,000 years.</li>
+<li><em>Obliquity</em> \(\varepsilon\), the tilt of the Earth's axis, varies between 22.1° and 24.5° with a period of 41,000 years. More tilt means hotter summers at high latitudes.</li>
+<li><em>Precession</em> slowly turns the axis, so the season when the Earth is closest to the Sun changes with periods of 19,000–23,000 years. Its effect on seasons is set by the <em>climatic precession</em> \(e\sin\varpi\), where \(\varpi\) is the longitude of perihelion.</li>
+</ul>
+<p><b>Why 65°N in summer?</b> Ice sheets grow when winter snow survives the summer. Most land at high latitudes is in the Northern Hemisphere. So Milanković argued that the key quantity is the summer sunshine around 65°N. Cool summers let ice accumulate, and warm summers melt it.</p>
+<p><b>Feedbacks.</b> Orbital changes alone are small. Ice reflects sunlight, so more ice means more cooling. The oceans absorb CO₂ in cold periods, and less CO₂ means more cooling. These feedbacks amplify the orbital "pacemaker" into full ice ages.</p>
+</aside>
+
+<h3 id="frame">Frame the Problem</h3>
+<p>The scientific objective is to test whether the orbit sets the timing of the ice ages, and to build a model that predicts climate from the orbit alone. The practical payoff: such a model can be run forward, because the orbit is known millions of years ahead. Framing: <em>supervised regression</em> on a <em>time series</em>, where inputs are the orbital state at (and before) each moment and the target is Antarctic temperature. We'll compare a generic statistical model with a physically motivated ice-sheet model whose hyperparameters are the climate system's thresholds and time constants.</p>
+
+<h3 id="measure">Select a Performance Measure</h3>
+<p>We will use the RMSE in °C (Equation 1-2), and the correlation between predicted and observed temperature. Neither of them says whether a model gets the <em>timing of events</em> right, such as the abrupt ends of the ice ages. So we will also compare model and data in the frequency domain, and compare the dates of the ice-age terminations.</p>
+
+<h3 id="assumptions">Check the Assumptions</h3>
+<ul>
+<li><b>The chronology is right.</b> Ice-core ages come from models of snow accumulation and ice flow, tied to independent markers. Their uncertainty is a few thousand years, more in the oldest part.</li>
+<li><b>Antarctica tracks global climate.</b> It does, broadly, but it is one place. We'll cross-check with the global deep-sea record.</li>
+<li><b>The insolation feature captures the forcing.</b> We pick 65°N and the summer solstice, following Milanković. That's a choice, and you could tune it.</li>
+<li><b>The rules don't change.</b> We'll see that they did, a million years ago.</li>
+</ul>
+
+<h2 id="get-data">Get the Data</h2>
+<pre class="code"><code><span class="c1"># Python ≥3.8 is required</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="k">assert</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+
+<span class="c1"># Scikit-Learn ≥1.0 is required</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sklearn</span>
+<span class="k">assert</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&gt;=</span> <span class="s2">"1.0"</span>
+
+<span class="c1"># Common imports</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="c1"># To make this notebook's output stable across runs</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+
+<span class="c1"># To plot pretty figures</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpl</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'axes'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'xtick'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'ytick'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+
+<span class="c1"># Where to save the figures</span>
+<span class="n">PROJECT_ROOT_DIR</span> <span class="o">=</span> <span class="s2">"."</span>
+<span class="n">IMAGES_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">PROJECT_ROOT_DIR</span><span class="p">,</span> <span class="s2">"images"</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">IMAGES_PATH</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">save_fig</span><span class="p">(</span><span class="n">fig_id</span><span class="p">,</span> <span class="n">tight_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fig_extension</span><span class="o">=</span><span class="s2">"png"</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mi">150</span><span class="p">):</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">IMAGES_PATH</span><span class="p">,</span> <span class="n">fig_id</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="n">fig_extension</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Saving figure"</span><span class="p">,</span> <span class="n">fig_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tight_layout</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">fig_extension</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">resolution</span><span class="p">)</span>
+</code></pre>
+<h3 id="download">Download the Data</h3>
+<p>All four datasets are plain text files with descriptive headers. The orbital solution is huge (51 million years), so we keep only ±6 million years:</p>
+<pre class="code"><code><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
+
+<span class="n">DATA_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">"datasets"</span><span class="p">)</span>
+<span class="n">NOAA</span> <span class="o">=</span> <span class="s2">"https://www.ncei.noaa.gov/pub/data/paleo/"</span>
+<span class="n">SOURCES</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"epica_temperature.txt"</span><span class="p">:</span> <span class="n">NOAA</span> <span class="o">+</span> <span class="s2">"icecore/antarctica/epica_domec/edc3deuttemp2007.txt"</span><span class="p">,</span>
+    <span class="s2">"antarctic_co2_composite.txt"</span><span class="p">:</span> <span class="n">NOAA</span> <span class="o">+</span> <span class="s2">"icecore/antarctica/antarctica2015co2composite.txt"</span><span class="p">,</span>
+    <span class="s2">"lr04_benthic_stack.txt"</span><span class="p">:</span> <span class="n">NOAA</span> <span class="o">+</span> <span class="s2">"contributions_by_author/lisiecki2005/lisiecki2005.txt"</span><span class="p">,</span>
+    <span class="s2">"La2004_past.txt"</span><span class="p">:</span> <span class="s2">"https://vo.imcce.fr/insola/earth/online/earth/La2004/INSOLN.LA2004.BTL.ASC"</span><span class="p">,</span>
+    <span class="s2">"La2004_future.txt"</span><span class="p">:</span> <span class="s2">"https://vo.imcce.fr/insola/earth/online/earth/La2004/INSOLP.LA2004.BTL.ASC"</span><span class="p">,</span>
+<span class="p">}</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_paleo_data</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">DATA_PATH</span><span class="p">):</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">url</span> <span class="ow">in</span> <span class="n">SOURCES</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">name</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">target</span><span class="p">):</span>
+            <span class="k">continue</span>
+        <span class="n">text</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">"latin-1"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">name</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"La2004"</span><span class="p">):</span>        <span class="c1"># keep -6 Myr .. +1 Myr (the files go to -51 Myr)</span>
+            <span class="n">lines</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">text</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">l</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">abs</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">&lt;=</span> <span class="mi">6000</span><span class="p">]</span>
+            <span class="n">text</span> <span class="o">=</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="o">+</span> <span class="s2">"</span><span class="se">\n</span><span class="s2">"</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="s2">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+            <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
+
+<span class="n">fetch_paleo_data</span><span class="p">()</span>
+<span class="nb">sorted</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">DATA_PATH</span><span class="p">))</span>
+</code></pre>
+<pre class="output">[&#x27;La2004_future.txt&#x27;,
+ &#x27;La2004_past.txt&#x27;,
+ &#x27;antarctic_co2_composite.txt&#x27;,
+ &#x27;epica_temperature.txt&#x27;,
+ &#x27;lr04_benthic_stack.txt&#x27;]</pre>
+<pre class="code"><code><span class="k">def</span><span class="w"> </span><span class="nf">load_epica</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">DATA_PATH</span><span class="p">):</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"epica_temperature.txt"</span><span class="p">),</span> <span class="n">sep</span><span class="o">=</span><span class="sa">r</span><span class="s2">"\s+"</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">91</span><span class="p">,</span>
+                     <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s2">"bag"</span><span class="p">,</span> <span class="s2">"depth_m"</span><span class="p">,</span> <span class="s2">"age_yr"</span><span class="p">,</span> <span class="s2">"deuterium"</span><span class="p">,</span> <span class="s2">"temperature"</span><span class="p">],</span> <span class="n">header</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">df</span><span class="p">[</span><span class="s2">"age_yr"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">df</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">age_kyr</span><span class="o">=</span><span class="n">df</span><span class="p">[</span><span class="s2">"age_yr"</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_orbit</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">DATA_PATH</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""La2004: time (kyr, negative = past), eccentricity, obliquity (rad),</span>
+<span class="sd">    longitude of perihelion from the moving equinox (rad)."""</span>
+    <span class="n">frames</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"La2004_past.txt"</span><span class="p">,</span> <span class="s2">"La2004_future.txt"</span><span class="p">):</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">name</span><span class="p">),</span> <span class="n">sep</span><span class="o">=</span><span class="sa">r</span><span class="s2">"\s+"</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+                        <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">,</span> <span class="s2">"ecc"</span><span class="p">,</span> <span class="s2">"obliquity"</span><span class="p">,</span> <span class="s2">"varpi"</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">frames</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">d</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">col</span><span class="p">:</span> <span class="n">col</span><span class="o">.</span><span class="n">str</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">"D"</span><span class="p">,</span> <span class="s2">"E"</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)))</span>
+    <span class="n">orbit</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">frames</span><span class="p">)</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">(</span><span class="s2">"t_kyr"</span><span class="p">)</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"t_kyr"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">orbit</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_co2</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">DATA_PATH</span><span class="p">):</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"antarctic_co2_composite.txt"</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"latin-1"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+    <span class="n">start</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">l</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="k">if</span> <span class="n">l</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">"age_gas_calBP"</span><span class="p">))</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[</span><span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()</span> <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">[</span><span class="n">start</span> <span class="o">+</span> <span class="mi">1</span><span class="p">:]</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="o">==</span> <span class="mi">3</span><span class="p">]</span>
+    <span class="n">co2</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"age_yr"</span><span class="p">,</span> <span class="s2">"co2_ppm"</span><span class="p">,</span> <span class="s2">"co2_err"</span><span class="p">])</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">co2</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">age_kyr</span><span class="o">=</span><span class="n">co2</span><span class="p">[</span><span class="s2">"age_yr"</span><span class="p">]</span> <span class="o">/</span> <span class="mi">1000</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">load_lr04</span><span class="p">(</span><span class="n">path</span><span class="o">=</span><span class="n">DATA_PATH</span><span class="p">):</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s2">"lr04_benthic_stack.txt"</span><span class="p">),</span> <span class="n">encoding</span><span class="o">=</span><span class="s2">"latin-1"</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">l</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="n">parts</span> <span class="o">=</span> <span class="n">l</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">parts</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">rows</span> <span class="ow">and</span> <span class="n">row</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">rows</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]:</span>      <span class="c1"># the file holds other tables after the stack</span>
+                <span class="k">break</span>
+            <span class="n">rows</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">row</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">,</span> <span class="s2">"d18O"</span><span class="p">,</span> <span class="s2">"d18O_err"</span><span class="p">])</span>
+
+<span class="n">epica</span><span class="p">,</span> <span class="n">orbit</span><span class="p">,</span> <span class="n">co2</span><span class="p">,</span> <span class="n">lr04</span> <span class="o">=</span> <span class="n">load_epica</span><span class="p">(),</span> <span class="n">load_orbit</span><span class="p">(),</span> <span class="n">load_co2</span><span class="p">(),</span> <span class="n">load_lr04</span><span class="p">()</span>
+<span class="n">epica</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>bag</th>
+      <th>depth_m</th>
+      <th>age_yr</th>
+      <th>deuterium</th>
+      <th>temperature</th>
+      <th>age_kyr</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>12</th>
+      <td>13</td>
+      <td>6.60</td>
+      <td>38.37379</td>
+      <td>-390.9</td>
+      <td>0.88</td>
+      <td>0.038374</td>
+    </tr>
+    <tr>
+      <th>13</th>
+      <td>14</td>
+      <td>7.15</td>
+      <td>46.81203</td>
+      <td>-385.1</td>
+      <td>1.84</td>
+      <td>0.046812</td>
+    </tr>
+    <tr>
+      <th>14</th>
+      <td>15</td>
+      <td>7.70</td>
+      <td>55.05624</td>
+      <td>-377.8</td>
+      <td>3.04</td>
+      <td>0.055056</td>
+    </tr>
+    <tr>
+      <th>15</th>
+      <td>16</td>
+      <td>8.25</td>
+      <td>64.41511</td>
+      <td>-394.1</td>
+      <td>0.35</td>
+      <td>0.064415</td>
+    </tr>
+    <tr>
+      <th>16</th>
+      <td>17</td>
+      <td>8.80</td>
+      <td>73.15077</td>
+      <td>-398.7</td>
+      <td>-0.42</td>
+      <td>0.073151</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+
+<h3 id="quick-look">Take a Quick Look at the Data Structure</h3>
+<pre class="code"><code><span class="n">epica</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+</code></pre>
+<pre class="output">&lt;class &#x27;pandas.DataFrame&#x27;&gt;
+Index: 5785 entries, 12 to 5799
+Data columns (total 6 columns):
+ #   Column       Non-Null Count  Dtype  
+---  ------       --------------  -----  
+ 0   bag          5785 non-null   int64  
+ 1   depth_m      5785 non-null   float64
+ 2   age_yr       5785 non-null   float64
+ 3   deuterium    5785 non-null   float64
+ 4   temperature  5785 non-null   float64
+ 5   age_kyr      5785 non-null   float64
+dtypes: float64(5), int64(1)
+memory usage: 316.4 KB</pre>
+<pre class="code"><code><span class="n">epica</span><span class="p">[[</span><span class="s2">"age_kyr"</span><span class="p">,</span> <span class="s2">"deuterium"</span><span class="p">,</span> <span class="s2">"temperature"</span><span class="p">]]</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>age_kyr</th>
+      <th>deuterium</th>
+      <th>temperature</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>5785.00</td>
+      <td>5785.0</td>
+      <td>5785.00</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>190.51</td>
+      <td>-417.8</td>
+      <td>-4.58</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>192.55</td>
+      <td>18.0</td>
+      <td>3.45</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>0.04</td>
+      <td>-449.5</td>
+      <td>-10.58</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>46.79</td>
+      <td>-432.5</td>
+      <td>-7.45</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>122.11</td>
+      <td>-421.3</td>
+      <td>-5.20</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>273.34</td>
+      <td>-403.3</td>
+      <td>-1.82</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>801.66</td>
+      <td>-361.2</td>
+      <td>5.46</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>The temperature is an <em>anomaly</em>, relative to the average of the last thousand years. It ranges from −10.6 °C (deepest glacial) to +5.5 °C (the warmest interglacials were warmer than today). Now the orbit around the present. La2004 stores the obliquity and the perihelion in radians, and negative times are the past:</p>
+<pre class="code"><code><span class="n">orbit</span><span class="p">[(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">)]</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>t_kyr</th>
+      <th>ecc</th>
+      <th>obliquity</th>
+      <th>varpi</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>5998</th>
+      <td>-2.0</td>
+      <td>0.017497</td>
+      <td>0.413555</td>
+      <td>1.200024</td>
+    </tr>
+    <tr>
+      <th>5999</th>
+      <td>-1.0</td>
+      <td>0.017161</td>
+      <td>0.411353</td>
+      <td>1.497928</td>
+    </tr>
+    <tr>
+      <th>6000</th>
+      <td>0.0</td>
+      <td>0.016702</td>
+      <td>0.409093</td>
+      <td>1.796257</td>
+    </tr>
+    <tr>
+      <th>6001</th>
+      <td>1.0</td>
+      <td>0.016275</td>
+      <td>0.406834</td>
+      <td>2.098561</td>
+    </tr>
+    <tr>
+      <th>6002</th>
+      <td>2.0</td>
+      <td>0.015850</td>
+      <td>0.404631</td>
+      <td>2.397657</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>Today \(e = 0.0167\) and \(\varepsilon = 0.4091\) rad = 23.44°. Now, an important property of the ice core:</p>
+<pre class="code"><code><span class="n">spacing</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diff</span><span class="p">(</span><span class="n">epica</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"median spacing: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">spacing</span><span class="p">[</span><span class="n">epica</span><span class="p">[</span><span class="s1">'age_kyr'</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">10</span><span class="p">])</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1000</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> years "</span>
+      <span class="sa">f</span><span class="s2">"(last 10 kyr) vs </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">median</span><span class="p">(</span><span class="n">spacing</span><span class="p">[</span><span class="n">epica</span><span class="p">[</span><span class="s1">'age_kyr'</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mi">700</span><span class="p">])</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">1000</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> years (&gt; 700 kyr)"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">median spacing: 19 years (last 10 kyr) vs 621 years (&gt; 700 kyr)</pre>
+<p>The sampling is extremely uneven. The top of the core has one sample every 19 years, and the bottom one every 600 years, because deep ice is squeezed thinner. If we fitted the raw samples, the last 10,000 years would weigh 30 times more than the oldest ones. So we resample to one value every 1,000 years.</p>
+
+<h3 id="test-set">Create a Test Set</h3>
+<p>For time series, a random split is wrong. Neighboring years are almost identical, so a random test set would test interpolation, not prediction. The honest test is to hold out a contiguous block of time, here the last glacial cycle (0–130,000 years ago), and train on the 670,000 years before it:</p>
+<pre class="code"><code><span class="c1"># Uneven sampling -&gt; one value per 1,000 years (interpolation), so that every epoch</span>
+<span class="c1"># weighs the same in the error</span>
+<span class="n">ages</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">800</span><span class="p">)</span>                             <span class="c1"># kyr before present</span>
+<span class="n">temp</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">ages</span><span class="p">,</span> <span class="n">epica</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">epica</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">])</span>
+<span class="n">climate</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"age_kyr"</span><span class="p">:</span> <span class="n">ages</span><span class="p">,</span> <span class="s2">"temperature"</span><span class="p">:</span> <span class="n">temp</span><span class="p">})</span>
+<span class="c1"># Time-series split: the most recent glacial cycle is the test set (the "future")</span>
+<span class="n">TEST_AGE</span> <span class="o">=</span> <span class="mi">130</span>
+<span class="n">train_set</span> <span class="o">=</span> <span class="n">climate</span><span class="p">[</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">TEST_AGE</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">test_set</span> <span class="o">=</span> <span class="n">climate</span><span class="p">[</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">TEST_AGE</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="nb">len</span><span class="p">(</span><span class="n">train_set</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_set</span><span class="p">)</span>
+</code></pre>
+<pre class="output">(670, 130)</pre>
+
+<h2 id="discover">Discover and Visualize the Data to Gain Insights</h2>
+<h3 id="viz">800,000 Years of Climate</h3>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mf">4.2</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">epica</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">epica</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">],</span> <span class="s2">"k-"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.7</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">TEST_AGE</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"tab:orange"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"test set"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">invert_xaxis</span><span class="p">();</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"thousands of years before present"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"Antarctic temperature anomaly (°C)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"lower left"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"epica_temperature_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-temp"><img src="images/epica_temperature_plot.png" alt="EPICA temperature"><figcaption><b>Figure 6-1.</b> 800,000 years of Antarctic temperature (EPICA Dome C). The test period is shaded.</figcaption></figure>
+<p>The famous <em>sawtooth</em>: slow, bumpy coolings over about 80,000 years, then sudden warmings, the <em>terminations</em>, in less than 10,000 years. Warm interglacials like today's are short spikes. Note also that the cycles before about 430,000 years ago had milder interglacials. Now the deep-sea record, which goes much further back (<a href="#fig-lr04">Figure 6-2</a>):</p>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mf">3.8</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">lr04</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">lr04</span><span class="p">[</span><span class="s2">"d18O"</span><span class="p">],</span> <span class="s2">"b-"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">invert_xaxis</span><span class="p">();</span> <span class="n">ax</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"thousands of years before present"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"benthic δ¹⁸O (‰)</span><span class="se">\n</span><span class="s2">(more ice ↓)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">3500</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"lr04_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-lr04"><img src="images/lr04_plot.png" alt="LR04 stack"><figcaption><b>Figure 6-2.</b> Global ice volume over 3.5 million years (LR04 stack; down = more ice)</figcaption></figure>
+<p>A striking change: before about a million years ago, the ice came and went in small, regular cycles. After it, the cycles became larger and slower. Keep this in mind for the "monitoring" section.</p>
+
+<h3 id="correlations">Looking for Correlations</h3>
+<pre class="code"><code><span class="n">co2_on_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">co2</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">co2</span><span class="p">[</span><span class="s2">"co2_ppm"</span><span class="p">])</span>
+<span class="n">climate</span><span class="p">[</span><span class="s2">"co2_ppm"</span><span class="p">]</span> <span class="o">=</span> <span class="n">co2_on_grid</span>
+<span class="n">climate</span><span class="p">[[</span><span class="s2">"temperature"</span><span class="p">,</span> <span class="s2">"co2_ppm"</span><span class="p">]]</span><span class="o">.</span><span class="n">corr</span><span class="p">()</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>temperature</th>
+      <th>co2_ppm</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>temperature</th>
+      <td>1.000</td>
+      <td>0.886</td>
+    </tr>
+    <tr>
+      <th>co2_ppm</th>
+      <td>0.886</td>
+      <td>1.000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"co2_ppm"</span><span class="p">],</span> <span class="n">climate</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">c</span><span class="o">=</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">"viridis"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">420</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"r"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mi">405</span><span class="p">,</span> <span class="o">-</span><span class="mi">8</span><span class="p">,</span> <span class="s2">"today:</span><span class="se">\n</span><span class="s2">≈420 ppm"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"r"</span><span class="p">,</span> <span class="n">ha</span><span class="o">=</span><span class="s2">"right"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"CO₂ (ppm)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"temperature anomaly (°C)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"co2_temperature_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-co2"><img src="images/co2_temperature_plot.png" alt="CO2 vs temperature"><figcaption><b>Figure 6-3.</b> Antarctic temperature against atmospheric CO₂ over 800,000 years. The dashed line marks today.</figcaption></figure>
+<p>A correlation of 0.89 between temperature and CO₂. This is not a proof that CO₂ <em>drives</em> the ice ages: in these cycles CO₂ is mostly a <em>feedback</em> that responds to and amplifies the orbital push. It is a strong hint of how sensitive the climate is to CO₂. Look also at where today's atmosphere sits: far to the right of every point in 800,000 years.</p>
+
+<h3 id="periods">Looking for Periodicities</h3>
+<p>If the orbit paces the climate, the climate should contain the orbit's periods. The data are unevenly sampled, so we use the Lomb–Scargle periodogram again (Chapter 1):</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.signal</span><span class="w"> </span><span class="kn">import</span> <span class="n">lombscargle</span><span class="p">,</span> <span class="n">find_peaks</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">periodogram</span><span class="p">(</span><span class="n">age</span><span class="p">,</span> <span class="n">value</span><span class="p">,</span> <span class="n">periods</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">lombscargle</span><span class="p">(</span><span class="n">age</span><span class="p">,</span> <span class="n">value</span> <span class="o">-</span> <span class="n">value</span><span class="o">.</span><span class="n">mean</span><span class="p">(),</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">periods</span><span class="p">,</span> <span class="n">normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="n">periods</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">150</span><span class="p">,</span> <span class="mi">4000</span><span class="p">)</span>
+<span class="n">power</span> <span class="o">=</span> <span class="n">periodogram</span><span class="p">(</span><span class="n">epica</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">epica</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">periods</span><span class="p">)</span>
+<span class="n">peaks</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">power</span><span class="p">,</span> <span class="n">height</span><span class="o">=</span><span class="mf">0.02</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="mi">60</span><span class="p">)</span>
+<span class="n">top</span> <span class="o">=</span> <span class="n">peaks</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argsort</span><span class="p">(</span><span class="n">power</span><span class="p">[</span><span class="n">peaks</span><span class="p">])[::</span><span class="o">-</span><span class="mi">1</span><span class="p">][:</span><span class="mi">6</span><span class="p">]]</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"period_kyr"</span><span class="p">:</span> <span class="n">periods</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="s2">"power"</span><span class="p">:</span> <span class="n">power</span><span class="p">[</span><span class="n">top</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)})</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>period_kyr</th>
+      <th>power</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>40.5</td>
+      <td>0.309</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>101.8</td>
+      <td>0.261</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>114.6</td>
+      <td>0.261</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>139.9</td>
+      <td>0.195</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>64.5</td>
+      <td>0.176</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>57.1</td>
+      <td>0.135</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="code"><code><span class="n">past</span> <span class="o">=</span> <span class="n">orbit</span><span class="p">[(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">2000</span><span class="p">)]</span>
+<span class="n">orbit_power</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">"eccentricity"</span><span class="p">:</span> <span class="n">periodogram</span><span class="p">(</span><span class="o">-</span><span class="n">past</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">past</span><span class="p">[</span><span class="s2">"ecc"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">periods</span><span class="p">),</span>
+    <span class="s2">"obliquity"</span><span class="p">:</span> <span class="n">periodogram</span><span class="p">(</span><span class="o">-</span><span class="n">past</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">past</span><span class="p">[</span><span class="s2">"obliquity"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">periods</span><span class="p">),</span>
+    <span class="s2">"climatic precession e·sin ϖ"</span><span class="p">:</span> <span class="n">periodogram</span><span class="p">(</span><span class="o">-</span><span class="n">past</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                                               <span class="p">(</span><span class="n">past</span><span class="p">[</span><span class="s2">"ecc"</span><span class="p">]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">past</span><span class="p">[</span><span class="s2">"varpi"</span><span class="p">]))</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">periods</span><span class="p">),</span>
+<span class="p">}</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">4</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">11</span><span class="p">,</span> <span class="mi">9</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">periods</span><span class="p">,</span> <span class="n">power</span><span class="p">,</span> <span class="s2">"k-"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"power"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"Antarctic temperature (EPICA)"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">pw</span><span class="p">)</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">:],</span> <span class="n">orbit_power</span><span class="o">.</span><span class="n">items</span><span class="p">()):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">periods</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="s2">"b-"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"power"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ax</span> <span class="ow">in</span> <span class="n">axes</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">23</span><span class="p">,</span> <span class="mi">41</span><span class="p">,</span> <span class="mi">100</span><span class="p">):</span>
+        <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"r"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">":"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"period (thousands of years)"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"periodograms_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-period"><img src="images/periodograms_plot.png" alt="Periodograms"><figcaption><b>Figure 6-4.</b> Periodograms of Antarctic temperature (top) and of the three orbital elements. Red dotted lines: 23, 41 and 100 thousand years.</figcaption></figure>
+<p>The climate record has strong power at 41,000 years, exactly the obliquity period, and at about 100,000 years, matching the eccentricity. A smaller peak near 23,000 years matches precession. This is the result of the landmark 1976 paper by Hays, Imbrie and Shackleton, "Variations in the Earth's Orbit: Pacemaker of the Ice Ages", reproduced here in a few lines.<sup class="fn"><a href="#fn2" id="r2">2</a></sup></p>
+<p>But there is a puzzle. Eccentricity changes the total yearly sunshine by only about 0.1%, which is far too little to cause the biggest climate cycle directly. This is the famous <em>100,000-year problem</em>, and we'll come back to it.</p>
+
+<h2 id="prepare">Prepare the Data for Machine Learning Algorithms</h2>
+<h3 id="insolation">Feature Engineering: Sunshine from Orbits</h3>
+<p>The orbital elements are not the right features: what matters physically is <em>sunshine</em>. The daily-mean insolation at latitude \(\phi\), on the day when the Sun is at longitude \(\lambda\) along its yearly path, follows from geometry:</p>
+<div class="equation"><div class="eq-caption"><b>Equation 6-1.</b> Daily-mean insolation at the top of the atmosphere</div>
+$$Q = \frac{S_0}{\pi}\left(\frac{1 + e\cos(\lambda - \varpi_\odot)}{1 - e^2}\right)^2\big(h_0\sin\phi\sin\delta + \cos\phi\cos\delta\sin h_0\big),\quad \sin\delta = \sin\varepsilon\sin\lambda,\quad \cos h_0 = -\tan\phi\tan\delta$$</div>
+<p>\(S_0 = 1361\) W/m² is the solar constant, \(\delta\) the Sun's declination (Chapter 1's Equation 1-1 again), \(h_0\) the hour angle of sunset, and \(\varpi_\odot\) the Sun's longitude of perihelion as seen from the Earth (La2004's \(\varpi\) + 180°). The first factor is the distance effect from eccentricity and precession. The second is the day-length and Sun-height effect from obliquity.</p>
+<pre class="code"><code><span class="n">S0</span> <span class="o">=</span> <span class="mf">1361.0</span>     <span class="c1"># W/m², total solar irradiance</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">daily_insolation</span><span class="p">(</span><span class="n">ecc</span><span class="p">,</span> <span class="n">obliquity</span><span class="p">,</span> <span class="n">varpi</span><span class="p">,</span> <span class="n">latitude_deg</span><span class="o">=</span><span class="mf">65.0</span><span class="p">,</span> <span class="n">solar_longitude_deg</span><span class="o">=</span><span class="mf">90.0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Daily-mean top-of-atmosphere insolation (W/m²) at a latitude, on the day when the Sun</span>
+<span class="sd">    is at a given longitude (90° = northern summer solstice). varpi as in La2004 (heliocentric)."""</span>
+    <span class="n">phi</span><span class="p">,</span> <span class="n">lam</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">latitude_deg</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">solar_longitude_deg</span><span class="p">)</span>
+    <span class="n">delta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">obliquity</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">lam</span><span class="p">))</span>                 <span class="c1"># solar declination</span>
+    <span class="n">h0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">delta</span><span class="p">),</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>       <span class="c1"># sunset hour angle</span>
+    <span class="n">distance_factor</span> <span class="o">=</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">ecc</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">lam</span> <span class="o">-</span> <span class="n">varpi</span> <span class="o">-</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">))</span> <span class="o">/</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">ecc</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>   <span class="c1"># (a/r)</span>
+    <span class="k">return</span> <span class="n">S0</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">distance_factor</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="p">(</span><span class="n">h0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">+</span>
+                                                <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">phi</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">delta</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">h0</span><span class="p">))</span>
+
+<span class="n">orbit</span><span class="p">[</span><span class="s2">"insolation_65N"</span><span class="p">]</span> <span class="o">=</span> <span class="n">daily_insolation</span><span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"ecc"</span><span class="p">],</span> <span class="n">orbit</span><span class="p">[</span><span class="s2">"obliquity"</span><span class="p">],</span> <span class="n">orbit</span><span class="p">[</span><span class="s2">"varpi"</span><span class="p">])</span>
+<span class="n">now</span> <span class="o">=</span> <span class="n">orbit</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">,</span> <span class="s2">"insolation_65N"</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="n">last_myr</span> <span class="o">=</span> <span class="n">orbit</span><span class="p">[(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">1000</span><span class="p">)][</span><span class="s2">"insolation_65N"</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"65°N summer insolation today: </span><span class="si">{</span><span class="n">now</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> W/m²  (range over 1 Myr: </span><span class="si">{</span><span class="n">last_myr</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">–</span><span class="si">{</span><span class="n">last_myr</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">)"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">65°N summer insolation today: 477.9 W/m²  (range over 1 Myr: 431–559)</pre>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">w</span> <span class="o">=</span> <span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="mi">800</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">orbit</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">w</span><span class="p">,</span> <span class="s2">"t_kyr"</span><span class="p">],</span> <span class="n">orbit</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">w</span><span class="p">,</span> <span class="s2">"insolation_65N"</span><span class="p">],</span> <span class="s2">"tab:orange"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">invert_xaxis</span><span class="p">();</span> <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"thousands of years before present (negative = future)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"W/m²"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="s2">"Insolation at 65°N on the day of the summer solstice"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"insolation_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-ins"><img src="images/insolation_plot.png" alt="65N insolation"><figcaption><b>Figure 6-5.</b> Summer insolation at 65°N, from 800,000 years ago to 100,000 years in the future</figcaption></figure>
+<p>Summer sunshine at 65°N swings by about 25% (430–560 W/m²), mostly with the 23,000-year precession rhythm. Its amplitude is modulated by eccentricity. Today we are near a minimum of eccentricity, so the coming swings are unusually weak.</p>
+
+<h3 id="lags">Lag Features</h3>
+<p>Ice sheets take thousands of years to respond, so climate depends on past forcing, not only on today's. The standard time-series trick is <em>lag features</em>: the values of the inputs some time before. Our transformer takes an age and returns the insolation, eccentricity, obliquity and climatic precession at that time and 5, 10 and 20 thousand years earlier:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">OrbitalFeatures</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""age (kyr) -&gt; orbital features at that time and at earlier times (lag features)."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lags</span><span class="o">=</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">),</span> <span class="n">latitude</span><span class="o">=</span><span class="mf">65.0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lags</span> <span class="o">=</span> <span class="n">lags</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">latitude</span> <span class="o">=</span> <span class="n">latitude</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__sklearn_is_fitted__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">age</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">daily_insolation</span><span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"ecc"</span><span class="p">],</span> <span class="n">orbit</span><span class="p">[</span><span class="s2">"obliquity"</span><span class="p">],</span> <span class="n">orbit</span><span class="p">[</span><span class="s2">"varpi"</span><span class="p">],</span> <span class="bp">self</span><span class="o">.</span><span class="n">latitude</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">lag</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">lags</span><span class="p">:</span>
+            <span class="n">ta</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">age</span> <span class="o">+</span> <span class="n">lag</span><span class="p">)</span>
+            <span class="n">e</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">vp</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">ta</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">orbit</span><span class="p">[</span><span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"ecc"</span><span class="p">,</span> <span class="s2">"obliquity"</span><span class="p">,</span> <span class="s2">"varpi_unwrapped"</span><span class="p">))</span>
+            <span class="n">cols</span> <span class="o">+=</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">ta</span><span class="p">,</span> <span class="n">t</span><span class="p">,</span> <span class="n">ins</span><span class="p">),</span> <span class="n">e</span><span class="p">,</span> <span class="n">eps</span><span class="p">,</span> <span class="n">e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">vp</span><span class="p">),</span> <span class="n">e</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">vp</span><span class="p">)]</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span>
+
+<span class="n">orbit</span><span class="p">[</span><span class="s2">"varpi_unwrapped"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unwrap</span><span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"varpi"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+<span class="n">OrbitalFeatures</span><span class="p">()</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">train_set</span><span class="p">[[</span><span class="s2">"age_kyr"</span><span class="p">]])[:</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+</code></pre>
+<pre class="output">array([[ 5.386247e+02,  3.940000e-02,  4.235000e-01, -2.820000e-02,
+        -2.760000e-02,  4.862400e+02,  3.660000e-02,  4.198000e-01,
+         1.920000e-02, -3.110000e-02,  4.627319e+02,  3.340000e-02,
+         4.079000e-01,  3.170000e-02,  1.050000e-02,  5.049179e+02,
+         2.840000e-02,  3.917000e-01, -2.790000e-02,  5.300000e-03],
+       [ 5.296083e+02,  3.890000e-02,  4.237000e-01, -1.950000e-02,
+        -3.370000e-02,  4.774026e+02,  3.580000e-02,  4.179000e-01,
+         2.630000e-02, -2.440000e-02,  4.644205e+02,  3.270000e-02,
+         4.051000e-01,  2.730000e-02,  1.810000e-02,  5.055683e+02,
+         2.820000e-02,  3.922000e-01, -2.810000e-02, -1.900000e-03]])</pre>
+
+<h2 id="train">Select and Train a Model</h2>
+<h3 id="linear">A Linear Model</h3>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">make_pipeline</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.preprocessing</span><span class="w"> </span><span class="kn">import</span> <span class="n">StandardScaler</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">Ridge</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">mean_squared_error</span>
+
+<span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span> <span class="o">=</span> <span class="n">train_set</span><span class="p">[[</span><span class="s2">"age_kyr"</span><span class="p">]],</span> <span class="n">train_set</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">lin_model</span> <span class="o">=</span> <span class="n">make_pipeline</span><span class="p">(</span><span class="n">OrbitalFeatures</span><span class="p">(),</span> <span class="n">StandardScaler</span><span class="p">(),</span> <span class="n">Ridge</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">1.0</span><span class="p">))</span>
+<span class="n">lin_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">pred</span> <span class="o">=</span> <span class="n">lin_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"linear model, training RMSE = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mean_squared_error</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span><span class="w"> </span><span class="n">pred</span><span class="p">))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> °C, "</span>
+      <span class="sa">f</span><span class="s2">"correlation = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">pred</span><span class="p">,</span><span class="w"> </span><span class="n">y_train</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">linear model, training RMSE = 1.85 °C, correlation = 0.75</pre>
+<h3 id="cv">Cross-Validation for Time Series</h3>
+<p>Ordinary K-fold cross-validation would again leak information between neighboring years. Instead we cut the training period into five contiguous blocks of about 134,000 years (roughly one glacial cycle each), and use them as groups in <code>GroupKFold</code>:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">GroupKFold</span><span class="p">,</span> <span class="n">cross_val_score</span>
+
+<span class="n">blocks</span> <span class="o">=</span> <span class="p">((</span><span class="n">train_set</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">TEST_AGE</span><span class="p">)</span> <span class="o">//</span> <span class="mi">134</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>   <span class="c1"># 5 blocks of ~134 kyr</span>
+<span class="n">blocked_cv</span> <span class="o">=</span> <span class="n">GroupKFold</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">blocks</span><span class="p">)))</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">rmse_scores</span><span class="p">(</span><span class="n">model</span><span class="p">):</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">cross_val_score</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">blocks</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">blocked_cv</span><span class="p">,</span>
+                            <span class="n">scoring</span><span class="o">=</span><span class="s2">"neg_root_mean_squared_error"</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">display_scores</span><span class="p">(</span><span class="n">name</span><span class="p">,</span> <span class="n">s</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">28s</span><span class="si">}</span><span class="s2"> RMSE per block: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">s</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">  mean </span><span class="si">{</span><span class="n">s</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> °C"</span><span class="p">)</span>
+
+<span class="n">display_scores</span><span class="p">(</span><span class="s2">"linear (orbit + lags)"</span><span class="p">,</span> <span class="n">rmse_scores</span><span class="p">(</span><span class="n">lin_model</span><span class="p">))</span>
+</code></pre>
+<pre class="output">linear (orbit + lags)        RMSE per block: [1.53 1.92 2.76 2.31 1.87]  mean 2.08 °C</pre>
+<p>How about a more flexible model, with lags every 5,000 years up to 100,000 years?</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.ensemble</span><span class="w"> </span><span class="kn">import</span> <span class="n">HistGradientBoostingRegressor</span>
+
+<span class="n">gbm</span> <span class="o">=</span> <span class="n">make_pipeline</span><span class="p">(</span><span class="n">OrbitalFeatures</span><span class="p">(</span><span class="n">lags</span><span class="o">=</span><span class="nb">tuple</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">101</span><span class="p">,</span> <span class="mi">5</span><span class="p">))),</span>
+                    <span class="n">HistGradientBoostingRegressor</span><span class="p">(</span><span class="n">max_iter</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">))</span>
+<span class="n">display_scores</span><span class="p">(</span><span class="s2">"gradient boosting (21 lags)"</span><span class="p">,</span> <span class="n">rmse_scores</span><span class="p">(</span><span class="n">gbm</span><span class="p">))</span>
+<span class="n">gbm</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"gradient boosting training RMSE = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mean_squared_error</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span><span class="w"> </span><span class="n">gbm</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_train</span><span class="p">)))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> °C"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">gradient boosting (21 lags)  RMSE per block: [2.22 1.62 2.73 2.84 3.17]  mean 2.51 °C
+gradient boosting training RMSE = 0.06 °C</pre>
+<p>A training RMSE of 0.06 °C and a cross-validated RMSE of 2.5 °C: gradient boosting memorized the training period, and generalizes worse than the linear model. With only about 670 strongly correlated data points, a flexible model has almost nothing to learn from. How does the linear model do in the frequency domain?</p>
+<pre class="code"><code><span class="n">lin_full</span> <span class="o">=</span> <span class="n">lin_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">climate</span><span class="p">[[</span><span class="s2">"age_kyr"</span><span class="p">]])</span>
+<span class="n">p_lin</span> <span class="o">=</span> <span class="n">periodogram</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">lin_full</span><span class="p">,</span> <span class="n">periods</span><span class="p">)</span>
+<span class="n">p_obs</span> <span class="o">=</span> <span class="n">periodogram</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">climate</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">periods</span><span class="p">)</span>
+<span class="n">band</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">p</span><span class="p">,</span> <span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">:</span> <span class="n">p</span><span class="p">[(</span><span class="n">periods</span> <span class="o">&gt;</span> <span class="n">lo</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">periods</span> <span class="o">&lt;</span> <span class="n">hi</span><span class="p">)]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"data"</span><span class="p">:</span> <span class="p">[</span><span class="n">band</span><span class="p">(</span><span class="n">p_obs</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_obs</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">44</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_obs</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">130</span><span class="p">)],</span>
+              <span class="s2">"linear model"</span><span class="p">:</span> <span class="p">[</span><span class="n">band</span><span class="p">(</span><span class="n">p_lin</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_lin</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">44</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_lin</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">130</span><span class="p">)]},</span>
+             <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"~23 kyr"</span><span class="p">,</span> <span class="s2">"~41 kyr"</span><span class="p">,</span> <span class="s2">"~100 kyr"</span><span class="p">])</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>data</th>
+      <th>linear model</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>~23 kyr</th>
+      <td>0.035</td>
+      <td>0.036</td>
+    </tr>
+    <tr>
+      <th>~41 kyr</th>
+      <td>0.186</td>
+      <td>0.386</td>
+    </tr>
+    <tr>
+      <th>~100 kyr</th>
+      <td>0.304</td>
+      <td>0.288</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>The linear model gets the 100,000-year power because eccentricity is one of its inputs. But it has twice too much 41,000-year power, and its response is smooth and symmetric: it cannot produce the sawtooth with its sudden terminations.</p>
+
+<h3 id="ice">An Ice-Sheet Model</h3>
+<p>Here's a physical idea. Ice sheets have <em>memory</em> and <em>thresholds</em>. They grow slowly when summers are cool, become unstable once they are very large, and then collapse quickly when the next strong summer comes. Didier Paillard (1998) captured this with three discrete climate states and a single ice-volume variable:</p>
+<div class="equation"><div class="eq-caption"><b>Equation 6-2.</b> A three-state ice-sheet model</div>
+$$\frac{dv}{dt} = \frac{v_R - v}{\tau_R} - \frac{f(t)}{\tau_F}, \qquad \text{i} \xrightarrow{f < i_0} \text{g} \xrightarrow{v > v_{\max}} \text{G} \xrightarrow{f > i_1} \text{i}$$</div>
+<p>\(f(t)\) is the normalized 65°N insolation, slightly truncated, because ice responds less to very low insolation than to high. In the interglacial state (i), the ice relaxes toward zero. In the glacial states (g, G), it relaxes toward full size. The state switches when the insolation crosses a threshold, or when the ice sheet becomes large enough to be unstable. The temperature is then a linear function of ice volume. The fitted parameters are only that line's intercept and slope. The eight thresholds and time constants are <em>hyperparameters</em>:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">RegressorMixin</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">IceSheetModel</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Paillard (1998)-style three-state ice-sheet model, driven by 65°N summer insolation.</span>
+<span class="sd">    States: 0 = interglacial (i), 1 = mild glacial (g), 2 = full glacial (G).</span>
+<span class="sd">      i -&gt; g when the forcing drops below i0</span>
+<span class="sd">      g -&gt; G when the ice volume exceeds v_max</span>
+<span class="sd">      G -&gt; i when the forcing rises above i1           (a 'termination')</span>
+<span class="sd">    dv/dt = (v_ref - v) / tau_state - f / tau_f,  v_ref = 0, 1, 1</span>
+<span class="sd">    Temperature = a + b * v  (a, b learned by linear regression)."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">i0</span><span class="o">=-</span><span class="mf">0.75</span><span class="p">,</span> <span class="n">i1</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">v_max</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">tau_i</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span> <span class="n">tau_g</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span> <span class="n">tau_G</span><span class="o">=</span><span class="mf">50.0</span><span class="p">,</span>
+                 <span class="n">tau_f</span><span class="o">=</span><span class="mf">25.0</span><span class="p">,</span> <span class="n">truncation</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">start_kyr</span><span class="o">=</span><span class="mi">1000</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">i0</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">i1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">v_max</span> <span class="o">=</span> <span class="n">i0</span><span class="p">,</span> <span class="n">i1</span><span class="p">,</span> <span class="n">v_max</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tau_i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_G</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_f</span> <span class="o">=</span> <span class="n">tau_i</span><span class="p">,</span> <span class="n">tau_g</span><span class="p">,</span> <span class="n">tau_G</span><span class="p">,</span> <span class="n">tau_f</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">truncation</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_kyr</span> <span class="o">=</span> <span class="n">truncation</span><span class="p">,</span> <span class="n">start_kyr</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">simulate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">until_kyr</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+        <span class="n">sel</span> <span class="o">=</span> <span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">start_kyr</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">until_kyr</span><span class="p">)</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">orbit</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sel</span><span class="p">,</span> <span class="s2">"t_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">ins</span> <span class="o">=</span> <span class="n">orbit</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">sel</span><span class="p">,</span> <span class="s2">"insolation_65N"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">ref</span> <span class="o">=</span> <span class="n">orbit</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="o">-</span><span class="bp">self</span><span class="o">.</span><span class="n">start_kyr</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">orbit</span><span class="p">[</span><span class="s2">"t_kyr"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">),</span> <span class="s2">"insolation_65N"</span><span class="p">]</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="p">(</span><span class="n">ins</span> <span class="o">-</span> <span class="n">ref</span><span class="o">.</span><span class="n">mean</span><span class="p">())</span> <span class="o">/</span> <span class="n">ref</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+        <span class="n">a</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">truncation</span>
+        <span class="n">f</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mi">4</span> <span class="o">*</span> <span class="n">a</span> <span class="o">*</span> <span class="n">a</span> <span class="o">+</span> <span class="n">x</span> <span class="o">*</span> <span class="n">x</span><span class="p">))</span> <span class="o">-</span> <span class="n">a</span>         <span class="c1"># weak response to low insolation</span>
+        <span class="n">v</span><span class="p">,</span> <span class="n">state</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mi">0</span>
+        <span class="n">V</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)),</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="nb">int</span><span class="p">)</span>
+        <span class="n">v_ref</span><span class="p">,</span> <span class="n">tau</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">),</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tau_i</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_g</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_G</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">state</span> <span class="o">==</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">f</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">&lt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">i0</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="k">elif</span> <span class="n">state</span> <span class="o">==</span> <span class="mi">1</span> <span class="ow">and</span> <span class="n">v</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">v_max</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="mi">2</span>
+            <span class="k">elif</span> <span class="n">state</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">f</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">&gt;</span> <span class="bp">self</span><span class="o">.</span><span class="n">i1</span><span class="p">:</span>
+                <span class="n">state</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">v</span> <span class="o">+=</span> <span class="p">(</span><span class="n">v_ref</span><span class="p">[</span><span class="n">state</span><span class="p">]</span> <span class="o">-</span> <span class="n">v</span><span class="p">)</span> <span class="o">/</span> <span class="n">tau</span><span class="p">[</span><span class="n">state</span><span class="p">]</span> <span class="o">-</span> <span class="n">f</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">tau_f</span>     <span class="c1"># dt = 1 kyr</span>
+            <span class="n">V</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">S</span><span class="p">[</span><span class="n">k</span><span class="p">]</span> <span class="o">=</span> <span class="n">v</span><span class="p">,</span> <span class="n">state</span>
+        <span class="k">return</span> <span class="n">t</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">S</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">ice_volume</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">age_kyr</span><span class="p">):</span>
+        <span class="n">t</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">age_kyr</span><span class="p">,</span> <span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">(),</span> <span class="n">t</span><span class="p">,</span> <span class="n">V</span><span class="p">)</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+        <span class="n">v</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ice_volume</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">A</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">v</span><span class="p">),</span> <span class="n">v</span><span class="p">]</span>
+        <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">b_</span><span class="p">),</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">lstsq</span><span class="p">(</span><span class="n">A</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">rcond</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">predict</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">a_</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">b_</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ice_volume</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+
+<span class="n">ice_model</span> <span class="o">=</span> <span class="n">IceSheetModel</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>          <span class="c1"># Paillard's 1998 published values</span>
+<span class="n">display_scores</span><span class="p">(</span><span class="s2">"ice-sheet model (1998 values)"</span><span class="p">,</span> <span class="n">rmse_scores</span><span class="p">(</span><span class="n">IceSheetModel</span><span class="p">()))</span>
+</code></pre>
+<pre class="output">ice-sheet model (1998 values) RMSE per block: [2.13 2.1  3.35 2.53 2.69]  mean 2.56 °C</pre>
+<p>With Paillard's original 1998 values, the cross-validated RMSE (2.56 °C) is no better than the linear model's. But those values were tuned by hand on older data. Let's tune them properly.</p>
+
+<h2 id="tune">Fine-Tune Your Model</h2>
+<h3 id="random">Randomized Search</h3>
+<p>This model is <em>not differentiable</em>. A tiny change of a threshold can switch a state and change the whole future, so gradient-based fitting like <code>least_squares()</code> doesn't work. Randomized search is ideal: each candidate costs one fast simulation, and 1,500 random combinations explore eight dimensions far better than a grid could:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">RandomizedSearchCV</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.stats</span><span class="w"> </span><span class="kn">import</span> <span class="n">uniform</span>
+
+<span class="n">param_distribs</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"i0"</span><span class="p">:</span> <span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mf">1.5</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span> <span class="s2">"i1"</span><span class="p">:</span> <span class="n">uniform</span><span class="p">(</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">2.0</span><span class="p">),</span> <span class="s2">"v_max"</span><span class="p">:</span> <span class="n">uniform</span><span class="p">(</span><span class="mf">0.5</span><span class="p">,</span> <span class="mf">1.5</span><span class="p">),</span>
+                  <span class="s2">"tau_i"</span><span class="p">:</span> <span class="n">uniform</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">27</span><span class="p">),</span> <span class="s2">"tau_g"</span><span class="p">:</span> <span class="n">uniform</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">90</span><span class="p">),</span> <span class="s2">"tau_G"</span><span class="p">:</span> <span class="n">uniform</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">75</span><span class="p">),</span>
+                  <span class="s2">"tau_f"</span><span class="p">:</span> <span class="n">uniform</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="mi">55</span><span class="p">),</span> <span class="s2">"truncation"</span><span class="p">:</span> <span class="n">uniform</span><span class="p">(</span><span class="mf">0.2</span><span class="p">,</span> <span class="mf">2.8</span><span class="p">)}</span>
+<span class="n">rnd_search</span> <span class="o">=</span> <span class="n">RandomizedSearchCV</span><span class="p">(</span><span class="n">IceSheetModel</span><span class="p">(),</span> <span class="n">param_distribs</span><span class="p">,</span> <span class="n">n_iter</span><span class="o">=</span><span class="mi">1500</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">blocked_cv</span><span class="p">,</span>
+                                <span class="n">scoring</span><span class="o">=</span><span class="s2">"neg_root_mean_squared_error"</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">rnd_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">blocks</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"best cross-validated RMSE: </span><span class="si">{</span><span class="o">-</span><span class="n">rnd_search</span><span class="o">.</span><span class="n">best_score_</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> °C"</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">rnd_search</span><span class="o">.</span><span class="n">best_params_</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<pre class="output">best cross-validated RMSE: 1.83 °C
+i0            -0.104
+i1            -0.336
+tau_G         36.370
+tau_f         35.762
+tau_g         26.867
+tau_i         15.102
+truncation     1.883
+v_max          0.991
+dtype: float64</pre>
+<p>The cross-validated RMSE drops to 1.83 °C, now better than the linear model. The best parameters are physically sensible: time constants of 15 to 36 thousand years, and a deglaciation threshold just below average insolation.</p>
+<h3 id="analyze">Analyze the Best Models</h3>
+<pre class="code"><code><span class="n">final_model</span> <span class="o">=</span> <span class="n">rnd_search</span><span class="o">.</span><span class="n">best_estimator_</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"linear"</span><span class="p">,</span> <span class="n">lin_model</span><span class="p">),</span> <span class="p">(</span><span class="s2">"gradient boosting"</span><span class="p">,</span> <span class="n">gbm</span><span class="p">),</span> <span class="p">(</span><span class="s2">"ice-sheet model"</span><span class="p">,</span> <span class="n">final_model</span><span class="p">)]:</span>
+    <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_train</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">18s</span><span class="si">}</span><span class="s2"> training RMSE </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mean_squared_error</span><span class="p">(</span><span class="n">y_train</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> °C, "</span>
+          <span class="sa">f</span><span class="s2">"correlation </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">y_train</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">linear             training RMSE 1.85 °C, correlation 0.75
+gradient boosting  training RMSE 0.06 °C, correlation 1.00
+ice-sheet model    training RMSE 1.83 °C, correlation 0.76</pre>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">full_ages</span> <span class="o">=</span> <span class="n">climate</span><span class="p">[[</span><span class="s2">"age_kyr"</span><span class="p">]]</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">climate</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">],</span> <span class="s2">"k-"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"EPICA (data)"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">final_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">full_ages</span><span class="p">),</span> <span class="s2">"tab:red"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">1.5</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"ice-sheet model"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">lin_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">full_ages</span><span class="p">),</span> <span class="s2">"tab:blue"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"linear model"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">axvspan</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">TEST_AGE</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"tab:orange"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.12</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"temperature anomaly (°C)"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"lower left"</span><span class="p">,</span> <span class="n">ncol</span><span class="o">=</span><span class="mi">3</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">t_sim</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">S</span> <span class="o">=</span> <span class="n">final_model</span><span class="o">.</span><span class="n">simulate</span><span class="p">()</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">t_sim</span><span class="p">,</span> <span class="n">orbit</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="s2">"t_kyr"</span><span class="p">)</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">t_sim</span><span class="p">,</span> <span class="s2">"insolation_65N"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="s2">"tab:orange"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+<span class="n">ax2</span> <span class="o">=</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">twinx</span><span class="p">()</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">fill_between</span><span class="p">(</span><span class="o">-</span><span class="n">t_sim</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">S</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="s2">"mid"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"tab:blue"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.15</span><span class="p">)</span>
+<span class="n">ax2</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="p">[</span><span class="s2">"interglacial"</span><span class="p">,</span> <span class="s2">"glacial"</span><span class="p">,</span> <span class="s2">"full glacial"</span><span class="p">]);</span> <span class="n">ax2</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="o">-</span><span class="mf">0.2</span><span class="p">,</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"65°N insolation (W/m²)"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">800</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"thousands of years before present"</span><span class="p">);</span> <span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"model_fit_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-fit"><img src="images/model_fit_plot.png" alt="Model fit"><figcaption><b>Figure 6-6.</b> Top: Antarctic temperature (black), the tuned ice-sheet model (red) and the linear model (blue). Bottom: the insolation forcing, and the climate state of the ice-sheet model.</figcaption></figure>
+<p>The ice-sheet model reproduces the sawtooth: long glacial descents, then sudden terminations. When do its terminations happen, compared with the data?</p>
+<pre class="code"><code><span class="c1"># When does the model end an ice age? (G -&gt; i transitions) vs. the data (fast warmings)</span>
+<span class="n">model_terms</span> <span class="o">=</span> <span class="o">-</span><span class="n">t_sim</span><span class="p">[</span><span class="mi">1</span><span class="p">:][(</span><span class="n">S</span><span class="p">[:</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">S</span><span class="p">[</span><span class="mi">1</span><span class="p">:]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)]</span>
+<span class="n">model_terms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">model_terms</span><span class="p">[</span><span class="n">model_terms</span> <span class="o">&lt;=</span> <span class="mi">800</span><span class="p">])</span>
+<span class="n">smooth</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span><span class="o">.</span><span class="n">rolling</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span> <span class="n">center</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">values</span>
+<span class="n">warming</span> <span class="o">=</span> <span class="n">smooth</span><span class="p">[:</span><span class="o">-</span><span class="mi">8</span><span class="p">]</span> <span class="o">-</span> <span class="n">smooth</span><span class="p">[</span><span class="mi">8</span><span class="p">:]</span>               <span class="c1"># warming over the following 8 kyr</span>
+<span class="n">cand</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">find_peaks</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan_to_num</span><span class="p">(</span><span class="n">warming</span><span class="p">),</span> <span class="n">height</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">distance</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="n">data_terms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">cand</span><span class="p">]</span> <span class="o">+</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">pairs</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">data_terms</span><span class="p">:</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="n">model_terms</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">model_terms</span> <span class="o">-</span> <span class="n">d</span><span class="p">))]</span>
+    <span class="n">pairs</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">"data (kyr ago)"</span><span class="p">:</span> <span class="n">d</span><span class="p">,</span> <span class="s2">"nearest model termination"</span><span class="p">:</span> <span class="n">m</span><span class="p">,</span> <span class="s2">"difference (kyr)"</span><span class="p">:</span> <span class="n">m</span> <span class="o">-</span> <span class="n">d</span><span class="p">})</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"model terminations:"</span><span class="p">,</span> <span class="n">model_terms</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">pairs</span><span class="p">)</span>
+</code></pre>
+<pre class="output">model terminations: [ 19  66 136 226 342 431 512 629 719 794]</pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>data (kyr ago)</th>
+      <th>nearest model termination</th>
+      <th>difference (kyr)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>15</td>
+      <td>19.0</td>
+      <td>4.0</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>133</td>
+      <td>136.0</td>
+      <td>3.0</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>247</td>
+      <td>226.0</td>
+      <td>-21.0</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>338</td>
+      <td>342.0</td>
+      <td>4.0</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>429</td>
+      <td>431.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>5</th>
+      <td>627</td>
+      <td>629.0</td>
+      <td>2.0</td>
+    </tr>
+    <tr>
+      <th>6</th>
+      <td>739</td>
+      <td>719.0</td>
+      <td>-20.0</td>
+    </tr>
+    <tr>
+      <th>7</th>
+      <td>792</td>
+      <td>794.0</td>
+      <td>2.0</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>Every termination detected in the data has a model termination within 2 to 21 thousand years. Most are within 4,000 years, close to the dating uncertainty of the ice core. The model knows nothing but the orbit and eight numbers. The 100,000-year problem has a natural answer here. Each glacial cycle ends at the first strong summer that comes <em>after</em> the ice sheet has grown large enough to be unstable. Large ice sheets take about 80,000–100,000 years to build, so terminations skip most of the 23,000-year insolation peaks and land, on average, every 100,000 years. The model also has two extra terminations (66,000 and 512,000 years ago) that don't appear in the data. At 66,000 years ago, a strong summer came after a fairly large ice build-up, and the real climate only warmed partially.</p>
+
+<h3 id="test">Evaluate on the Test Set</h3>
+<pre class="code"><code><span class="n">X_test</span><span class="p">,</span> <span class="n">y_test</span> <span class="o">=</span> <span class="n">test_set</span><span class="p">[[</span><span class="s2">"age_kyr"</span><span class="p">]],</span> <span class="n">test_set</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">model</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"linear"</span><span class="p">,</span> <span class="n">lin_model</span><span class="p">),</span> <span class="p">(</span><span class="s2">"gradient boosting"</span><span class="p">,</span> <span class="n">gbm</span><span class="p">),</span> <span class="p">(</span><span class="s2">"ice-sheet model"</span><span class="p">,</span> <span class="n">final_model</span><span class="p">)]:</span>
+    <span class="n">p</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X_test</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">name</span><span class="si">:</span><span class="s2">18s</span><span class="si">}</span><span class="s2"> test RMSE </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mean_squared_error</span><span class="p">(</span><span class="n">y_test</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> °C, "</span>
+          <span class="sa">f</span><span class="s2">"correlation </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">corrcoef</span><span class="p">(</span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">y_test</span><span class="p">)[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">]</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">linear             test RMSE 2.14 °C, correlation 0.81
+gradient boosting  test RMSE 2.21 °C, correlation 0.77
+ice-sheet model    test RMSE 2.84 °C, correlation 0.69</pre>
+<p>An honest result. On the last glacial cycle, the linear model has the best RMSE, and the ice-sheet model is penalized for its false termination 66,000 years ago. That error spans 50,000 years of the test period. Neither model is perfect, and the right choice depends on the question. If you want the smallest average error, the linear model wins on this test. If you want to know <em>when ice ages end</em>, the ice-sheet model is the only one that can tell you. Let's also compare the spectra:</p>
+<pre class="code"><code><span class="n">p_model</span> <span class="o">=</span> <span class="n">periodogram</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">final_model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">full_ages</span><span class="p">),</span> <span class="n">periods</span><span class="p">)</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"data"</span><span class="p">:</span> <span class="p">[</span><span class="n">band</span><span class="p">(</span><span class="n">p_obs</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_obs</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">44</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_obs</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">130</span><span class="p">)],</span>
+              <span class="s2">"linear model"</span><span class="p">:</span> <span class="p">[</span><span class="n">band</span><span class="p">(</span><span class="n">p_lin</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_lin</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">44</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_lin</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">130</span><span class="p">)],</span>
+              <span class="s2">"ice-sheet model"</span><span class="p">:</span> <span class="p">[</span><span class="n">band</span><span class="p">(</span><span class="n">p_model</span><span class="p">,</span> <span class="mi">19</span><span class="p">,</span> <span class="mi">25</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_model</span><span class="p">,</span> <span class="mi">38</span><span class="p">,</span> <span class="mi">44</span><span class="p">),</span> <span class="n">band</span><span class="p">(</span><span class="n">p_model</span><span class="p">,</span> <span class="mi">80</span><span class="p">,</span> <span class="mi">130</span><span class="p">)]},</span>
+             <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"~23 kyr"</span><span class="p">,</span> <span class="s2">"~41 kyr"</span><span class="p">,</span> <span class="s2">"~100 kyr"</span><span class="p">])</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>data</th>
+      <th>linear model</th>
+      <th>ice-sheet model</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>~23 kyr</th>
+      <td>0.035</td>
+      <td>0.036</td>
+      <td>0.057</td>
+    </tr>
+    <tr>
+      <th>~41 kyr</th>
+      <td>0.186</td>
+      <td>0.386</td>
+      <td>0.127</td>
+    </tr>
+    <tr>
+      <th>~100 kyr</th>
+      <td>0.304</td>
+      <td>0.288</td>
+      <td>0.328</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>The ice-sheet model gets the balance closest to the data: most power at 100,000 years and less at 41,000 years. The linear model overstates obliquity by a factor of two.</p>
+
+<h2 id="present">Present Your Solution</h2>
+<p>What you can report:</p>
+<ol>
+<li>The climate of the last 800,000 years contains the orbital periods (41,000, about 100,000 and 23,000 years). The orbit is the pacemaker of the ice ages.</li>
+<li>Summer insolation at 65°N, computed from the orbit, is the right feature. A simple non-linear ice-sheet model driven by it reproduces the timing of all the major terminations, and explains why the cycles last about 100,000 years.</li>
+<li>Generic flexible models overfit badly. With strongly autocorrelated data and a few hundred points, physics-informed structure beats capacity.</li>
+<li>CO₂ moves almost in lockstep with temperature, as an amplifying feedback.</li>
+</ol>
+
+<h2 id="launch">Launch, Monitor, and Maintain</h2>
+<p>The orbit is known for millions of years ahead, so let's "launch" the model into the future (<a href="#fig-forecast">Figure 6-7</a>):</p>
+<pre class="code"><code><span class="n">t_f</span><span class="p">,</span> <span class="n">V_f</span><span class="p">,</span> <span class="n">S_f</span> <span class="o">=</span> <span class="n">final_model</span><span class="o">.</span><span class="n">simulate</span><span class="p">(</span><span class="n">until_kyr</span><span class="o">=</span><span class="mi">150</span><span class="p">)</span>
+<span class="n">fut</span> <span class="o">=</span> <span class="n">t_f</span> <span class="o">&gt;</span> <span class="mi">0</span>
+<span class="n">future_temp</span> <span class="o">=</span> <span class="n">final_model</span><span class="o">.</span><span class="n">a_</span> <span class="o">+</span> <span class="n">final_model</span><span class="o">.</span><span class="n">b_</span> <span class="o">*</span> <span class="n">V_f</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="o">-</span><span class="n">t_f</span><span class="p">,</span> <span class="n">future_temp</span><span class="p">,</span> <span class="s2">"tab:red"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"ice-sheet model (orbit only)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">climate</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">],</span> <span class="n">climate</span><span class="p">[</span><span class="s2">"temperature"</span><span class="p">],</span> <span class="s2">"k-"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"EPICA"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="mi">300</span><span class="p">,</span> <span class="o">-</span><span class="mi">150</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"thousands of years before present (negative = future)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"°C"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"lower left"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"forecast_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"model state today:"</span><span class="p">,</span> <span class="p">[</span><span class="s2">"interglacial"</span><span class="p">,</span> <span class="s2">"glacial"</span><span class="p">,</span> <span class="s2">"full glacial"</span><span class="p">][</span><span class="n">S_f</span><span class="p">[</span><span class="n">t_f</span> <span class="o">==</span> <span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]])</span>
+<span class="n">next_full</span> <span class="o">=</span> <span class="n">t_f</span><span class="p">[</span><span class="n">fut</span><span class="p">][</span><span class="n">S_f</span><span class="p">[</span><span class="n">fut</span><span class="p">]</span> <span class="o">==</span> <span class="mi">2</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"next full-glacial state in the orbit-only model: </span><span class="si">{</span><span class="n">next_full</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> kyr from now"</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">next_full</span><span class="p">)</span> <span class="k">else</span> <span class="s2">"no full glacial in the next 150 kyr"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">Saving figure forecast_plot
+model state today: glacial
+next full-glacial state in the orbit-only model: 56 kyr from now</pre>
+<figure id="fig-forecast"><img src="images/forecast_plot.png" alt="Forecast"><figcaption><b>Figure 6-7.</b> The ice-sheet model run 150,000 years into the future, with orbital forcing only</figcaption></figure>
+<p>Driven by the orbit alone, the model says we have already entered a mild glacial state, and that the next full ice age comes in about 56,000 years. Eccentricity is currently near a minimum, so the coming summers have weak swings and no strong "melt" pulse. Research models with physics of ice and carbon reach similar conclusions: the present interglacial was close to a glacial inception before the industrial era, and the low eccentricity favors an unusually long interglacial.<sup class="fn"><a href="#fn3" id="r3">3</a></sup> But should we trust this forecast? Two monitoring checks say: not as it is.</p>
+<p><b>Concept drift.</b> Was the climate always in the "100,000-year world"? Let's look at the deep-sea record before and after one million years ago:</p>
+<pre class="code"><code><span class="c1"># Concept drift: is the 100-kyr world the only one? Periodogram of LR04 in two windows</span>
+<span class="n">windows</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"1.25–2.5 million years ago"</span><span class="p">:</span> <span class="p">(</span><span class="mi">1250</span><span class="p">,</span> <span class="mi">2500</span><span class="p">),</span> <span class="s2">"0–1 million years ago"</span><span class="p">:</span> <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1000</span><span class="p">)}</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">10</span><span class="p">,</span> <span class="mi">4</span><span class="p">))</span>
+<span class="k">for</span> <span class="p">(</span><span class="n">label</span><span class="p">,</span> <span class="p">(</span><span class="n">lo</span><span class="p">,</span> <span class="n">hi</span><span class="p">)),</span> <span class="n">color</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">windows</span><span class="o">.</span><span class="n">items</span><span class="p">(),</span> <span class="p">[</span><span class="s2">"tab:green"</span><span class="p">,</span> <span class="s2">"tab:blue"</span><span class="p">]):</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">lr04</span><span class="p">[(</span><span class="n">lr04</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">lo</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">lr04</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">hi</span><span class="p">)]</span>
+    <span class="n">pw</span> <span class="o">=</span> <span class="n">periodogram</span><span class="p">(</span><span class="n">w</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">w</span><span class="p">[</span><span class="s2">"d18O"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">periods</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">periods</span><span class="p">,</span> <span class="n">pw</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">label</span><span class="si">}</span><span class="s2">: strongest period </span><span class="si">{</span><span class="n">periods</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">pw</span><span class="p">)]</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> kyr"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="p">(</span><span class="mi">41</span><span class="p">,</span> <span class="mi">100</span><span class="p">):</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"r"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">":"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"period (kyr)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"power"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">();</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"mid_pleistocene_transition_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<pre class="output">1.25–2.5 million years ago: strongest period 41 kyr
+0–1 million years ago: strongest period 96 kyr
+Saving figure mid_pleistocene_transition_plot</pre>
+<figure id="fig-mpt"><img src="images/mid_pleistocene_transition_plot.png" alt="Mid-Pleistocene Transition"><figcaption><b>Figure 6-8.</b> Periodograms of global ice volume, 1.25–2.5 million years ago (green) and over the last million years (blue)</figcaption></figure>
+<p>Before about a million years ago, the ice ages followed the 41,000-year obliquity rhythm. After it, the 100,000-year cycles took over. The orbit didn't change: the climate system did. This is the <em>Mid-Pleistocene Transition</em>, and its cause is still debated, perhaps slowly declining CO₂ or the erosion of soft sediments under the ice sheets. A model trained on one regime fails in the other. That's concept drift on a geological scale.</p>
+<p><b>Data drift.</b> And then there is the input our model doesn't even have:</p>
+<pre class="code"><code><span class="n">pre_industrial</span> <span class="o">=</span> <span class="n">co2</span><span class="p">[(</span><span class="n">co2</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">co2</span><span class="p">[</span><span class="s2">"age_kyr"</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">800</span><span class="p">)]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"CO2 in the training period: </span><span class="si">{</span><span class="n">pre_industrial</span><span class="p">[</span><span class="s1">'co2_ppm'</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2">–"</span>
+      <span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">pre_industrial</span><span class="p">[</span><span class="s1">'co2_ppm'</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.0f</span><span class="si">}</span><span class="s2"> ppm;  today: ≈420 ppm"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">CO2 in the training period: 174–299 ppm;  today: ≈420 ppm</pre>
+<p>Every one of our 670 training points had CO₂ between about 170 and 300 ppm. Today's 420 ppm is far outside the training distribution, and rising. No model trained on the past 800,000 years can be trusted to extrapolate there. Physical models that include CO₂ find that today's levels postpone the next glaciation by tens of thousands of years or more. When production inputs leave the training distribution, the right response is not to trust the model less a little. It is to stop and build a model that contains the new physics.</p>
+
+<h2 id="try">Try It Out!</h2>
+<p>The animation runs on the chapter's equations and fitted model. Tab 1 shows the Earth's orbit, with its eccentricity, tilt and precession taken from La2004 for any moment you pick, and the resulting sunshine at 65°N through the year. Tab 2 is a time machine from 800,000 years ago to 100,000 years in the future: the forcing, the ice-sheet model's state and ice volume, a growing and shrinking northern ice cap, and the real Antarctic temperature. Full screen: <a href="animations/ice_ages_animation.html">animations/ice_ages_animation.html</a>.</p>
+<iframe class="anim" src="animations/ice_ages_animation.html" title="Ice ages animation" loading="lazy"></iframe>
+
+<h2 id="exercises">Exercises</h2>
+<ol class="exercise">
+<li>Tune the forcing itself: make the latitude (55–75°N) and the day of the year (the solar longitude in <code>daily_insolation()</code>) hyperparameters of the search. Does "65°N summer" win? Try caloric summer insolation or integrated summer energy instead.</li>
+<li>Fit the ice-sheet model to the LR04 ice-volume record instead of Antarctic temperature. Do the terminations line up better?</li>
+<li>Add CO₂ as an input to the linear model. How much does the RMSE improve? Why is this "cheating" for forecasting, but useful for understanding?</li>
+<li>Train the ice-sheet model on 1.5–2.5 million years ago (LR04) and run it on the last million years. Quantify the concept drift.</li>
+<li>Use <code>TimeSeriesSplit</code> (training always <em>before</em> validation) instead of blocked <code>GroupKFold</code>. Which is more appropriate here, and why?</li>
+<li>Replace the three-state model with a small recurrent neural network (an LSTM) trained on insolation. With 670 points, what happens?</li>
+</ol>
+
+<hr class="end">
+<div class="footnotes">
+<p id="fn1"><a href="#r1">1</a> M. Milanković, <i>Kanon der Erdbestrahlung und seine Anwendung auf das Eiszeitenproblem</i> (1941). The idea goes back to James Croll in the 1860s.</p>
+<p id="fn2"><a href="#r2">2</a> J. D. Hays, J. Imbrie and N. J. Shackleton, "Variations in the Earth's Orbit: Pacemaker of the Ice Ages", <i>Science</i> 194, 1121 (1976).</p>
+<p id="fn3"><a href="#r3">3</a> A. Berger and M.-F. Loutre, "An Exceptionally Long Interglacial Ahead?", <i>Science</i> 297, 1287 (2002). A. Ganopolski, R. Winkelmann and H. J. Schellnhuber, "Critical insolation–CO₂ relation for diagnosing past and future glacial inception", <i>Nature</i> 529, 200 (2016).</p>
+<p><b>Data credits.</b> EPICA Dome C: J. Jouzel et al. (2007), <i>Science</i> 317, 793. CO₂ composite: B. Bereiter et al. (2015), <i>GRL</i> 42, 542. LR04: L. Lisiecki and M. Raymo (2005), <i>Paleoceanography</i> 20, PA1003. All via the NOAA World Data Service for Paleoclimatology. Orbital solution: J. Laskar et al. (2004), <i>A&amp;A</i> 428, 261, via IMCCE. Ice-sheet model after D. Paillard (1998), <i>Nature</i> 391, 378.</p>
+</div>
+</main>
+</div>
+</body>
+</html>
