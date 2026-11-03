@@ -276,7 +276,7 @@ document.getElementById('tabs').onclick = ev => {
   sides[tab]();
 };
 function frame(now) {
-  const dt = Math.min(now - last, 60) / 1000; last = now;
+  const dt = Math.max(0, Math.min(now - last, 60)) / 1000; last = now;
   if (playing) tDays += dt * speed * 10;
   ctx.clearRect(0, 0, W, H);
   draws[tab]();

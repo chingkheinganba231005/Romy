@@ -1,0 +1,1264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rediscovering Neptune</title>
+<meta name="chapter" content="3">
+<meta name="description" content="An end-to-end machine learning project: find an unseen planet from the anomalies in the motion of Uranus, as Le Verrier did in 1846, using NASA/JPL data.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Source+Sans+3:wght@300;400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"
+  onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false}]});"></script>
+<style>/* Book-style layout for the end-to-end project guides */
+:root {
+  --bg: #fdfcf9;
+  --fg: #1d1d1f;
+  --muted: #5d5d66;
+  --rule: #d9d6cf;
+  --accent: #a3122a;          /* chapter red */
+  --accent-soft: #f6e8ea;
+  --code-bg: #f3f2ee;
+  --code-fg: #1d1d1f;
+  --out-bg: #ffffff;
+  --side-bg: #f1efe9;
+  --note: #2f5d8a;
+  --tip: #2f7a4f;
+  --warn: #a3122a;
+  --link: #1f5f99;
+  --toc-bg: #f6f4ef;
+  --tbl-stripe: #f5f3ee;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #17181b; --fg: #e8e6e1; --muted: #a3a3ab; --rule: #34353a;
+    --accent: #ff6b81; --accent-soft: #3a2228; --code-bg: #212226; --code-fg: #e8e6e1;
+    --out-bg: #1b1c20; --side-bg: #222328; --note: #7fb2e5; --tip: #78c99a; --warn: #ff6b81;
+    --link: #8cc0f2; --toc-bg: #1c1d21; --tbl-stripe: #1f2024;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #17181b; --fg: #e8e6e1; --muted: #a3a3ab; --rule: #34353a;
+  --accent: #ff6b81; --accent-soft: #3a2228; --code-bg: #212226; --code-fg: #e8e6e1;
+  --out-bg: #1b1c20; --side-bg: #222328; --note: #7fb2e5; --tip: #78c99a; --warn: #ff6b81;
+  --link: #8cc0f2; --toc-bg: #1c1d21; --tbl-stripe: #1f2024;
+}
+* { box-sizing: border-box; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  font-size: 18px; line-height: 1.62;
+  -webkit-text-size-adjust: 100%;
+}
+a { color: var(--link); }
+.layout { display: flex; max-width: 1280px; margin: 0 auto; }
+nav.toc {
+  position: sticky; top: 0; align-self: flex-start; height: 100vh; overflow-y: auto;
+  width: 290px; flex: 0 0 290px; padding: 28px 18px 40px 22px; background: var(--toc-bg);
+  border-right: 1px solid var(--rule);
+  font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif; font-size: 14.5px; line-height: 1.4;
+}
+nav.toc .toc-title { font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: 12px; color: var(--accent); margin-bottom: 10px; }
+nav.toc ol { list-style: none; padding-left: 0; margin: 0; }
+nav.toc ol ol { padding-left: 14px; margin: 3px 0 8px; }
+nav.toc li { margin: 4px 0; }
+nav.toc a { color: var(--fg); text-decoration: none; }
+nav.toc a:hover { color: var(--accent); }
+nav.toc ol ol a { color: var(--muted); }
+main { flex: 1 1 auto; min-width: 0; padding: 40px 56px 120px; max-width: 920px; }
+.theme-btn {
+  position: fixed; right: 16px; top: 12px; z-index: 5; font: 13px "Source Sans 3", Arial, sans-serif;
+  background: var(--side-bg); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 10px; cursor: pointer;
+}
+.toc-btn { display: none; }
+
+/* chapter opener */
+.chapter-opener { border-bottom: 2px solid var(--fg); padding-bottom: 18px; margin-bottom: 30px; }
+.chapter-label { font-family: "Source Sans 3", Arial, sans-serif; text-transform: uppercase; letter-spacing: .25em; color: var(--accent); font-weight: 700; font-size: 15px; text-align: right; }
+.chapter-number { font-family: "Source Sans 3", Arial, sans-serif; font-size: 84px; line-height: 1; font-weight: 300; text-align: right; color: var(--accent); }
+h1.chapter-title { font-family: "Source Sans 3", Arial, sans-serif; font-size: 44px; line-height: 1.12; margin: 8px 0 0; text-align: right; font-weight: 600; }
+.chapter-sub { text-align: right; color: var(--muted); font-style: italic; margin-top: 6px; }
+h2, h3, h4 { font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif; line-height: 1.25; }
+h2 { font-size: 31px; margin: 64px 0 14px; padding-bottom: 6px; border-bottom: 1px solid var(--rule); font-weight: 600; }
+h3 { font-size: 23px; margin: 40px 0 10px; font-weight: 600; }
+h4 { font-size: 18.5px; margin: 28px 0 8px; font-weight: 700; }
+p { margin: 0 0 16px; }
+em.term, .term { font-style: italic; }
+ol.steps li, ul li { margin: 4px 0; }
+
+/* code */
+pre, code, kbd { font-family: "Source Code Pro", "SFMono-Regular", Menlo, Consolas, monospace; }
+p code, li code, td code { font-size: .86em; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+pre.code, pre.shell {
+  background: var(--code-bg); color: var(--code-fg); padding: 14px 16px; border-radius: 4px; overflow-x: auto;
+  font-size: 14.2px; line-height: 1.5; margin: 14px 0 6px; border-left: 3px solid var(--rule);
+}
+pre.output {
+  background: var(--out-bg); border: 1px dashed var(--rule); padding: 10px 14px; overflow-x: auto;
+  font-size: 13.6px; line-height: 1.45; margin: 4px 0 18px; color: var(--fg);
+}
+pre.output::before { content: "Output"; display: block; font: 600 10.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.dataframe-wrap { overflow-x: auto; margin: 6px 0 18px; }
+table { border-collapse: collapse; font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; }
+table.dataframe th, table.dataframe td, table.data th, table.data td { padding: 4px 10px; border-bottom: 1px solid var(--rule); text-align: right; white-space: nowrap; }
+table.dataframe tbody tr:nth-child(odd), table.data tbody tr:nth-child(odd) { background: var(--tbl-stripe); }
+table.data { margin: 10px 0 20px; width: 100%; }
+table.data th, table.data td { text-align: left; white-space: normal; vertical-align: top; }
+.table-caption { font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; margin-top: 18px; }
+.table-caption b { color: var(--accent); }
+
+/* pygments (default-ish, readable in both themes) */
+.k, .kn, .kd, .kc, .ow { color: #8a2be2; font-weight: 600; }
+.s, .s1, .s2, .sa, .sd, .si, .se { color: #2f7a4f; }
+.mi, .mf, .mh, .il { color: #b35c00; }
+.c, .c1, .cm { color: #7a7a85; font-style: italic; }
+.nf, .nc { color: #1f5f99; }
+.nb, .bp { color: #0e7c86; }
+.o { color: inherit; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .k, :root:not([data-theme="light"]) .kn, :root:not([data-theme="light"]) .kd, :root:not([data-theme="light"]) .kc, :root:not([data-theme="light"]) .ow { color: #c79bff; }
+  :root:not([data-theme="light"]) .s, :root:not([data-theme="light"]) .s1, :root:not([data-theme="light"]) .s2, :root:not([data-theme="light"]) .sa, :root:not([data-theme="light"]) .sd, :root:not([data-theme="light"]) .si { color: #8fd6a8; }
+  :root:not([data-theme="light"]) .mi, :root:not([data-theme="light"]) .mf { color: #ffb366; }
+  :root:not([data-theme="light"]) .nf, :root:not([data-theme="light"]) .nc { color: #8cc0f2; }
+  :root:not([data-theme="light"]) .nb, :root:not([data-theme="light"]) .bp { color: #6fd3dc; } }
+:root[data-theme="dark"] .k, :root[data-theme="dark"] .kn, :root[data-theme="dark"] .kd, :root[data-theme="dark"] .kc, :root[data-theme="dark"] .ow { color: #c79bff; }
+:root[data-theme="dark"] .s, :root[data-theme="dark"] .s1, :root[data-theme="dark"] .s2, :root[data-theme="dark"] .sa, :root[data-theme="dark"] .sd, :root[data-theme="dark"] .si { color: #8fd6a8; }
+:root[data-theme="dark"] .mi, :root[data-theme="dark"] .mf { color: #ffb366; }
+:root[data-theme="dark"] .nf, :root[data-theme="dark"] .nc { color: #8cc0f2; }
+:root[data-theme="dark"] .nb, :root[data-theme="dark"] .bp { color: #6fd3dc; }
+
+/* admonitions: tip / note / warning, like the book's margin animals */
+.admon { display: flex; gap: 14px; margin: 22px 0; padding: 12px 16px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); font-size: 16.5px; }
+.admon .icon { flex: 0 0 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0; color: #fff; margin-top: 3px; }
+.admon .icon::after { font: 700 11.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .06em; }
+.admon.tip .icon::after { content: "TIP"; }
+.admon.note .icon::after { content: "NOTE"; }
+.admon.warning .icon::after { content: "!"; font-size: 24px; }
+.admon.tip .icon { background: var(--tip); }
+.admon.note .icon { background: var(--note); }
+.admon.warning .icon { background: var(--warn); }
+.admon .body p:last-child { margin-bottom: 0; }
+.admon .body { min-width: 0; }
+
+/* sidebars (boxed asides with a title) */
+aside.sidebar { background: var(--side-bg); border: 1px solid var(--rule); padding: 16px 22px 8px; margin: 26px 0; font-size: 16.5px; border-radius: 3px; }
+aside.sidebar h5 { font-family: "Source Sans 3", Arial, sans-serif; font-size: 18px; text-align: center; margin: 0 0 10px; }
+
+/* figures & equations */
+figure { margin: 26px 0; text-align: center; }
+figure img { max-width: 100%; height: auto; border-radius: 2px; background: #fff; }
+figcaption, .eq-caption { font-family: "Source Sans 3", Arial, sans-serif; font-size: 14.5px; color: var(--fg); margin-top: 8px; text-align: left; }
+figcaption b, .eq-caption b { color: var(--accent); }
+.equation { margin: 22px 0; padding: 4px 0 8px; overflow-x: auto; }
+.equation .eq-caption { margin-bottom: 6px; }
+.katex-display { margin: .4em 0 !important; }
+.footnotes { font-size: 14.5px; border-top: 1px solid var(--rule); margin-top: 60px; padding-top: 10px; color: var(--muted); }
+sup.fn a { text-decoration: none; }
+.callout-list { counter-reset: c; }
+.checklist li::marker { color: var(--accent); font-weight: 700; }
+.exercise li { margin-bottom: 10px; }
+.big-picture { font-family: "Source Sans 3", Arial, sans-serif; }
+iframe.anim { width: 100%; height: 620px; border: 1px solid var(--rule); border-radius: 4px; background: #0b0d14; }
+.data-badge { display: inline-block; font: 700 11.5px "Source Sans 3", Arial, sans-serif; letter-spacing: .06em; text-transform: uppercase; padding: 2px 8px; border-radius: 10px; color: #fff; background: var(--tip); vertical-align: middle; }
+.data-badge.nasa { background: var(--note); }
+.data-badge.sim { background: var(--warn); }
+hr.end { border: 0; border-top: 2px solid var(--fg); margin: 60px 0 10px; }
+
+@media (max-width: 980px) {
+  nav.toc { position: fixed; left: 0; top: 0; z-index: 10; transform: translateX(-100%); transition: transform .2s; box-shadow: 0 0 30px rgba(0,0,0,.25); }
+  nav.toc.open { transform: none; }
+  .toc-btn { display: block; position: fixed; left: 16px; top: 12px; z-index: 11; font: 13px "Source Sans 3", Arial, sans-serif; background: var(--side-bg); color: var(--fg); border: 1px solid var(--rule); border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  main { padding: 60px 16px 80px; }
+  body { font-size: 17px; }
+  h1.chapter-title { font-size: 32px; }
+  .chapter-number { font-size: 60px; }
+  h2 { font-size: 25px; }
+  h3 { font-size: 20px; }
+  pre.code, pre.shell { font-size: 12.8px; }
+  iframe.anim { height: 520px; }
+}
+</style>
+</head>
+<body>
+<button class="toc-btn" onclick="document.querySelector('nav.toc').classList.toggle('open')">☰ Contents</button>
+<button class="theme-btn" onclick="(function(){var r=document.documentElement;var d=r.getAttribute('data-theme')==='dark'||(!r.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);r.setAttribute('data-theme',d?'light':'dark');})()">◐ Theme</button>
+<div class="layout">
+<nav class="toc" onclick="if(event.target.tagName==='A')this.classList.remove('open')">
+  <div class="toc-title">Chapter 3 · Contents</div>
+  <ol>
+    <li><a href="#real-data">Working with Real Data</a></li>
+    <li><a href="#big-picture">Look at the Big Picture</a>
+      <ol><li><a href="#crash-course">A Crash Course in Celestial Mechanics</a></li><li><a href="#frame">Frame the Problem</a></li><li><a href="#measure">Select a Performance Measure</a></li><li><a href="#assumptions">Check the Assumptions</a></li></ol></li>
+    <li><a href="#get-data">Get the Data</a>
+      <ol><li><a href="#download">Download the Data</a></li><li><a href="#quick-look">Take a Quick Look at the Data Structure</a></li><li><a href="#test-set">Create a Test Set</a></li></ol></li>
+    <li><a href="#discover">Discover and Visualize the Data to Gain Insights</a>
+      <ol><li><a href="#viz">Visualizing the Path of Uranus</a></li><li><a href="#bode">Experimenting with Attribute Combinations: Bode's Law</a></li></ol></li>
+    <li><a href="#prepare">Prepare the Data for Machine Learning Algorithms</a></li>
+    <li><a href="#train">Select and Train a Model</a>
+      <ol><li><a href="#simulator">A Model That Simulates Gravity</a></li><li><a href="#training">Training and Evaluating on the Training Set</a></li><li><a href="#cv">Better Evaluation Using Cross-Validation</a></li><li><a href="#anomaly">The Anomaly</a></li></ol></li>
+    <li><a href="#tune">Fine-Tune Your Model: Searching for Planet X</a>
+      <ol><li><a href="#linearize">A Linear Model of the Unknown</a></li><li><a href="#grid">Grid Search</a></li><li><a href="#analyze">Analyze the Best Models and Their Errors</a></li><li><a href="#test">Evaluate Your System on the Test Set</a></li></ol></li>
+    <li><a href="#present">Present Your Solution</a></li>
+    <li><a href="#launch">Launch: Point the Telescope</a></li>
+    <li><a href="#monitor">Monitor and Maintain</a></li>
+    <li><a href="#try">Try It Out!</a></li>
+    <li><a href="#exercises">Exercises</a></li>
+  </ol>
+</nav>
+<main>
+
+<div class="chapter-opener">
+  <div class="chapter-label">Chapter</div>
+  <div class="chapter-number">3</div>
+  <h1 class="chapter-title">Rediscovering Neptune:<br>Finding a Planet in the Residuals</h1>
+  <div class="chapter-sub">an end-to-end Machine Learning project with NASA/JPL data</div>
+</div>
+
+<p>In this chapter you will go through a third project end to end, pretending to be a young mathematician at the Paris Observatory in the summer of 1845. The director, François Arago, has a problem for you. Uranus, the planet William Herschel discovered in 1781, refuses to follow its tables. The best astronomers in Europe have tried and failed to compute an orbit that matches all the observations. Is Newton's law of gravity wrong at that distance from the Sun? Or is something out there, something nobody has ever seen, pulling on Uranus?<sup class="fn"><a href="#fn1" id="r1">1</a></sup> Here are the main steps you will go through:</p>
+<ol class="steps">
+  <li>Look at the big picture.</li>
+  <li>Get the data.</li>
+  <li>Discover and visualize the data to gain insights.</li>
+  <li>Prepare the data for Machine Learning algorithms.</li>
+  <li>Select a model and train it.</li>
+  <li>Fine-tune your model.</li>
+  <li>Present your solution.</li>
+  <li>Launch, monitor, and maintain your system.</li>
+</ol>
+<p>This chapter is about one of the most important skills in data science: <em>reading the residuals</em>. When a good model leaves a systematic pattern in its errors, the pattern is information. Here, the information is a planet. You will build a gravity simulator, fit it to the observations like any other model, find the anomaly, and then search for the hidden cause with a grid search. Finally, you will "point the telescope" at the predicted spot on the night of 23 September 1846.</p>
+
+<h2 id="real-data">Working with Real Data</h2>
+<p>Ideally, we would use the actual telescope measurements of Uranus that Le Verrier used. These are the meridian-circle positions from Greenwich, Paris and other observatories, plus about twenty pre-discovery sightings by Flamsteed, Bradley, Mayer and Le Monnier, who recorded Uranus as a "star". Unfortunately, these have never been published as a digitized dataset: they live in 18th- and 19th-century printed volumes. So, as allowed by our data-quality ladder from Chapter 1, we fall back to the next best thing:</p>
+<table class="data">
+<thead><tr><th>Dataset</th><th>Kind</th><th>Used for</th></tr></thead>
+<tbody>
+<tr><td>NASA/JPL Horizons: astrometric right ascension and declination of Uranus seen from the Earth, 1690–1846</td><td><span class="data-badge nasa">NASA model</span></td><td>the "observations" (targets)</td></tr>
+<tr><td>NASA/JPL Horizons: heliocentric positions of the Earth, Jupiter and Saturn</td><td><span class="data-badge nasa">NASA model</span></td><td>the known planets (inputs of the simulator)</td></tr>
+<tr><td>NASA/JPL Horizons: Neptune on 23 September 1846</td><td><span class="data-badge nasa">NASA model</span></td><td>only at the very end, to check the prediction</td></tr>
+</tbody></table>
+<p>The JPL Horizons ephemeris (DE440/DE441) is a model of the solar system fitted to centuries of real observations, including historical ones, plus radar and spacecraft data. It contains the real motion of Uranus, <em>including the pull of Neptune</em>, which is exactly what makes it suitable: the signal we are looking for is in there. Its positions are far more precise than any 1840s measurement, and we'll discuss what that changes. To keep the experiment honest, we will treat Neptune's own data like a sealed envelope: the notebook downloads it only after the prediction is made.</p>
+<div class="admon note"><div class="icon">Note</div><div class="body"><p>The notebook <code>neptune_project.ipynb</code> runs every line of code in this chapter in under two minutes. All the data are cached in <code>datasets/nasa/</code>.</p></div></div>
+
+<h2 id="big-picture">Look at the Big Picture</h2>
+
+<aside class="sidebar" id="crash-course"><h5>A Crash Course in Celestial Mechanics</h5>
+<p><b>Newton's law of gravity.</b> Every mass attracts every other mass with a force proportional to both masses and inversely proportional to the square of their distance: \(F = G m_1 m_2 / d^2\). With the Sun alone, a planet follows a perfect Kepler ellipse (Chapter 1). But the planets also attract <em>each other</em>.</p>
+<p><b>Perturbations.</b> Jupiter has 1/1,047 of the Sun's mass, and Saturn 1/3,498. Their pulls bend the orbit of Uranus very slightly. These <em>perturbations</em> amount to minutes of arc over decades. They must be included to predict a planet's position to arcsecond accuracy.</p>
+<p><b>The N-body problem.</b> There is no formula for the motion of three or more gravitating bodies. In the 18th and 19th centuries, astronomers computed perturbations with long series expansions, by hand. Today we simply <em>integrate</em> the equations of motion numerically: from a position and velocity at one instant, step forward in small time steps using the accelerations. Our model is such a simulator.</p>
+<p><b>The heliocentric frame.</b> We describe positions relative to the Sun. But the Sun itself is pulled by Jupiter and Saturn, so our origin accelerates. This adds an "indirect" term to the equations: the perturbing planet pulls Uranus, <em>and</em> pulls the Sun out from under it:</p>
+<div class="equation"><div class="eq-caption"><b>Equation 3-1.</b> Heliocentric acceleration of Uranus</div>
+$$\ddot{\mathbf r} = -\frac{G(M_\odot + m_U)\,\mathbf r}{|\mathbf r|^3} + \sum_k G m_k\left(\frac{\mathbf r_k - \mathbf r}{|\mathbf r_k - \mathbf r|^3} - \frac{\mathbf r_k}{|\mathbf r_k|^3}\right)$$</div>
+<p><b>O − C.</b> Astronomers have used Machine Learning's favorite diagnostic for centuries under a different name: "observed minus computed", the residuals of the prediction.</p>
+<p><b>The history.</b> After Herschel's discovery in 1781, astronomers searched old star catalogs and found that Uranus had been recorded as a star many times since 1690. In 1821, Alexis Bouvard published tables of Uranus that included the perturbations by Jupiter and Saturn. He could not fit both the old and the new observations with any orbit. So he concluded that the old observations were wrong and fitted only the new ones. Within a few years, Uranus drifted away from his tables too.</p>
+</aside>
+
+<h3 id="frame">Frame the Problem</h3>
+<p>The objective is to explain the motion of Uranus, and if the explanation is a new planet, to predict where it is so that someone can look. That second part is unusual. Our real "product" is not the predictions of the model we fit, but the <em>hidden parameters</em> of a second model.</p>
+<p>Let's frame it in ML terms. The first stage is <em>supervised regression</em>: inputs are times, targets are sky positions, and the model is a gravity simulator with six trainable parameters (the position and velocity of Uranus at one epoch). The second stage is <em>anomaly analysis</em>: are the residuals just noise, or do they have structure? The third stage is a kind of <em>inverse problem</em>, or latent-variable search. We add an unobserved planet X to the model, with its own parameters (mass, distance, position along its orbit), and search for the values that best explain the anomaly. Its distance and position are natural hyperparameters for a grid search. Everything is batch learning.</p>
+
+<h3 id="measure">Select a Performance Measure</h3>
+<p>For each observation \(i\) we compare the observed ecliptic longitude and latitude \((\lambda_i, \beta_i)\) with the computed ones. A difference in longitude covers a smaller angle on the sky away from the ecliptic, so it is multiplied by \(\cos\beta\). We stack both components into one residual vector and use the RMSE, in arcseconds:</p>
+<div class="equation"><div class="eq-caption"><b>Equation 3-2.</b> RMS of the residuals (O − C)</div>
+$$\text{RMS} = \sqrt{\frac{1}{2m}\sum_{i=1}^{m}\Big[\big((\lambda_i^{\text{obs}} - \lambda_i^{\text{calc}})\cos\beta_i\big)^2 + \big(\beta_i^{\text{obs}} - \beta_i^{\text{calc}}\big)^2\Big]}$$</div>
+<p>For scale, the meridian circles of the 1840s measured planetary positions to roughly 1–3″. The pre-discovery sightings were much worse, often 10″ or more.</p>
+
+<h3 id="assumptions">Check the Assumptions</h3>
+<ul>
+<li><b>Newton is right.</b> This is the big one. If the data cannot be explained with Newtonian gravity plus a planet, we may have to doubt gravity itself. Remember this for the epilogue.</li>
+<li><b>The known planets are known.</b> We take the positions of the Earth, Jupiter and Saturn as given. In 1845 they were well known from their own observations. Their masses come from their moons, with the Kepler III trick of Chapter 1.</li>
+<li><b>Planet X is simple.</b> Following Le Verrier, we assume a circular orbit in the plane of the ecliptic. The planets known in 1845 have small eccentricities and inclinations, so this is a reasonable first model.</li>
+<li><b>Light takes time.</b> Light from Uranus takes about 2.7 hours to reach us. During that time Uranus moves about 5″, so we compute where Uranus <em>was</em> when the light left it.</li>
+<li><b>The observations are noise-free.</b> NASA's positions are much more precise than real 1840s ones. This makes our residuals cleaner than Le Verrier's. We will keep this in mind when interpreting how sure we are.</li>
+</ul>
+
+<h2 id="get-data">Get the Data</h2>
+<p>Same workspace as before: <code>python3 -m pip install -U jupyter numpy pandas matplotlib scipy scikit-learn</code>.</p>
+<pre class="code"><code><span class="c1"># Python ≥3.8 is required</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="k">assert</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span> <span class="o">&gt;=</span> <span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">8</span><span class="p">)</span>
+
+<span class="c1"># Scikit-Learn ≥1.0 is required</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sklearn</span>
+<span class="k">assert</span> <span class="n">sklearn</span><span class="o">.</span><span class="n">__version__</span> <span class="o">&gt;=</span> <span class="s2">"1.0"</span>
+
+<span class="c1"># Common imports</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+
+<span class="c1"># To make this notebook's output stable across runs</span>
+<span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">42</span><span class="p">)</span>
+
+<span class="c1"># To plot pretty figures</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">mpl</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'axes'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">13</span><span class="p">)</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'xtick'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+<span class="n">mpl</span><span class="o">.</span><span class="n">rc</span><span class="p">(</span><span class="s1">'ytick'</span><span class="p">,</span> <span class="n">labelsize</span><span class="o">=</span><span class="mi">11</span><span class="p">)</span>
+
+<span class="c1"># Where to save the figures</span>
+<span class="n">PROJECT_ROOT_DIR</span> <span class="o">=</span> <span class="s2">"."</span>
+<span class="n">IMAGES_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">PROJECT_ROOT_DIR</span><span class="p">,</span> <span class="s2">"images"</span><span class="p">)</span>
+<span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">IMAGES_PATH</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">save_fig</span><span class="p">(</span><span class="n">fig_id</span><span class="p">,</span> <span class="n">tight_layout</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fig_extension</span><span class="o">=</span><span class="s2">"png"</span><span class="p">,</span> <span class="n">resolution</span><span class="o">=</span><span class="mi">150</span><span class="p">):</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">IMAGES_PATH</span><span class="p">,</span> <span class="n">fig_id</span> <span class="o">+</span> <span class="s2">"."</span> <span class="o">+</span> <span class="n">fig_extension</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Saving figure"</span><span class="p">,</span> <span class="n">fig_id</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">tight_layout</span><span class="p">:</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="n">fig_extension</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="n">resolution</span><span class="p">)</span>
+</code></pre>
+<h3 id="download">Download the Data</h3>
+<p>We need two kinds of Horizons tables. <em>Vector</em> tables give a body's position and velocity in space, relative to the Sun, in the ecliptic frame of J2000, in AU and AU/day. <em>Observer</em> tables give what a telescope sees: right ascension and declination as seen from the Earth's center. We also ask for the solar elongation, the angle between Uranus and the Sun on the sky:</p>
+<pre class="code"><code><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.parse</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
+
+<span class="n">NASA_PATH</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">"datasets"</span><span class="p">,</span> <span class="s2">"nasa"</span><span class="p">)</span>
+<span class="n">HORIZONS_API</span> <span class="o">=</span> <span class="s2">"https://ssd.jpl.nasa.gov/api/horizons.api"</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">horizons_request</span><span class="p">(</span><span class="o">**</span><span class="n">params</span><span class="p">):</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="nb">format</span><span class="o">=</span><span class="s2">"text"</span><span class="p">,</span> <span class="n">OBJ_DATA</span><span class="o">=</span><span class="s2">"NO"</span><span class="p">,</span> <span class="n">MAKE_EPHEM</span><span class="o">=</span><span class="s2">"YES"</span><span class="p">,</span> <span class="n">CSV_FORMAT</span><span class="o">=</span><span class="s2">"YES"</span><span class="p">)</span>
+    <span class="n">base</span><span class="o">.</span><span class="n">update</span><span class="p">({</span><span class="n">k</span><span class="p">:</span> <span class="sa">f</span><span class="s2">"'</span><span class="si">{</span><span class="n">v</span><span class="si">}</span><span class="s2">'"</span> <span class="k">if</span> <span class="n">k</span> <span class="ow">in</span> <span class="p">(</span><span class="s2">"COMMAND"</span><span class="p">,</span> <span class="s2">"CENTER"</span><span class="p">,</span> <span class="s2">"START_TIME"</span><span class="p">,</span> <span class="s2">"STOP_TIME"</span><span class="p">,</span>
+                                       <span class="s2">"STEP_SIZE"</span><span class="p">,</span> <span class="s2">"QUANTITIES"</span><span class="p">)</span> <span class="k">else</span> <span class="n">v</span>
+                 <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">params</span><span class="o">.</span><span class="n">items</span><span class="p">()})</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">HORIZONS_API</span> <span class="o">+</span> <span class="s2">"?"</span> <span class="o">+</span> <span class="n">urllib</span><span class="o">.</span><span class="n">parse</span><span class="o">.</span><span class="n">urlencode</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
+    <span class="n">text</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlopen</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">timeout</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="n">text</span><span class="p">[:</span><span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"$$SOE"</span><span class="p">)]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+    <span class="n">body</span> <span class="o">=</span> <span class="n">text</span><span class="p">[</span><span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"$$SOE"</span><span class="p">)</span> <span class="o">+</span> <span class="mi">5</span><span class="p">:</span><span class="n">text</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="s2">"$$EOE"</span><span class="p">)]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">header</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)]</span>
+    <span class="n">rows</span> <span class="o">=</span> <span class="p">[[</span><span class="n">x</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">","</span><span class="p">)]</span> <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">body</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()]</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">rows</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="n">cols</span><span class="p">[:</span><span class="nb">len</span><span class="p">(</span><span class="n">rows</span><span class="p">[</span><span class="mi">0</span><span class="p">])])</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_vectors</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">start</span><span class="o">=</span><span class="s2">"1680-01-01"</span><span class="p">,</span> <span class="n">stop</span><span class="o">=</span><span class="s2">"1850-01-01"</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="s2">"4d"</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Heliocentric ecliptic (J2000) position and velocity, in AU and AU/day."""</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">NASA_PATH</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">NASA_PATH</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"vectors_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.csv"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">horizons_request</span><span class="p">(</span><span class="n">COMMAND</span><span class="o">=</span><span class="n">target</span><span class="p">,</span> <span class="n">EPHEM_TYPE</span><span class="o">=</span><span class="s2">"VECTORS"</span><span class="p">,</span> <span class="n">CENTER</span><span class="o">=</span><span class="s2">"500@10"</span><span class="p">,</span>
+                              <span class="n">START_TIME</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">STOP_TIME</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span> <span class="n">STEP_SIZE</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                              <span class="n">VEC_TABLE</span><span class="o">=</span><span class="s2">"2"</span><span class="p">,</span> <span class="n">REF_PLANE</span><span class="o">=</span><span class="s2">"ECLIPTIC"</span><span class="p">,</span> <span class="n">OUT_UNITS</span><span class="o">=</span><span class="s2">"AU-D"</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="s2">"JDTDB"</span><span class="p">,</span> <span class="s2">"X"</span><span class="p">,</span> <span class="s2">"Y"</span><span class="p">,</span> <span class="s2">"Z"</span><span class="p">,</span> <span class="s2">"VX"</span><span class="p">,</span> <span class="s2">"VY"</span><span class="p">,</span> <span class="s2">"VZ"</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"jd"</span><span class="p">,</span> <span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="s2">"z"</span><span class="p">,</span> <span class="s2">"vx"</span><span class="p">,</span> <span class="s2">"vy"</span><span class="p">,</span> <span class="s2">"vz"</span><span class="p">]</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">fetch_observations</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">stop</span><span class="p">,</span> <span class="n">step</span><span class="o">=</span><span class="s2">"5d"</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Astrometric RA/Dec as seen from the Earth's centre, plus the solar elongation."""</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">NASA_PATH</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">NASA_PATH</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"observer_</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">.csv"</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">horizons_request</span><span class="p">(</span><span class="n">COMMAND</span><span class="o">=</span><span class="n">target</span><span class="p">,</span> <span class="n">EPHEM_TYPE</span><span class="o">=</span><span class="s2">"OBSERVER"</span><span class="p">,</span> <span class="n">CENTER</span><span class="o">=</span><span class="s2">"500@399"</span><span class="p">,</span>
+                              <span class="n">START_TIME</span><span class="o">=</span><span class="n">start</span><span class="p">,</span> <span class="n">STOP_TIME</span><span class="o">=</span><span class="n">stop</span><span class="p">,</span> <span class="n">STEP_SIZE</span><span class="o">=</span><span class="n">step</span><span class="p">,</span>
+                              <span class="n">QUANTITIES</span><span class="o">=</span><span class="s2">"1,23"</span><span class="p">,</span> <span class="n">CAL_FORMAT</span><span class="o">=</span><span class="s2">"JD"</span><span class="p">,</span> <span class="n">ANG_FORMAT</span><span class="o">=</span><span class="s2">"DEG"</span><span class="p">)</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="s2">"Date"</span><span class="p">,</span> <span class="s2">"R.A."</span><span class="p">,</span> <span class="s2">"DEC"</span><span class="p">,</span> <span class="s2">"S-O-T"</span><span class="p">))]]</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">"jd"</span><span class="p">,</span> <span class="s2">"ra"</span><span class="p">,</span> <span class="s2">"dec"</span><span class="p">,</span> <span class="s2">"elongation"</span><span class="p">]</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
+
+<span class="n">earth</span> <span class="o">=</span> <span class="n">fetch_vectors</span><span class="p">(</span><span class="s2">"399"</span><span class="p">,</span> <span class="s2">"earth"</span><span class="p">)</span>
+<span class="n">jupiter</span> <span class="o">=</span> <span class="n">fetch_vectors</span><span class="p">(</span><span class="s2">"5"</span><span class="p">,</span> <span class="s2">"jupiter"</span><span class="p">)</span>
+<span class="n">saturn</span> <span class="o">=</span> <span class="n">fetch_vectors</span><span class="p">(</span><span class="s2">"6"</span><span class="p">,</span> <span class="s2">"saturn"</span><span class="p">)</span>
+<span class="n">uranus_sky</span> <span class="o">=</span> <span class="n">fetch_observations</span><span class="p">(</span><span class="s2">"7"</span><span class="p">,</span> <span class="s2">"uranus"</span><span class="p">,</span> <span class="s2">"1690-01-01"</span><span class="p">,</span> <span class="s2">"1846-09-23"</span><span class="p">)</span>
+<span class="n">uranus_sky</span><span class="o">.</span><span class="n">head</span><span class="p">()</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>jd</th>
+      <th>ra</th>
+      <th>dec</th>
+      <th>elongation</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>2338320.5</td>
+      <td>55.55516</td>
+      <td>19.47398</td>
+      <td>132.3008</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>2338325.5</td>
+      <td>55.43939</td>
+      <td>19.45030</td>
+      <td>127.0919</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>2338330.5</td>
+      <td>55.34356</td>
+      <td>19.43097</td>
+      <td>121.9031</td>
+    </tr>
+    <tr>
+      <th>3</th>
+      <td>2338335.5</td>
+      <td>55.26877</td>
+      <td>19.41625</td>
+      <td>116.7384</td>
+    </tr>
+    <tr>
+      <th>4</th>
+      <td>2338340.5</td>
+      <td>55.21582</td>
+      <td>19.40634</td>
+      <td>111.6013</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+
+<h3 id="quick-look">Take a Quick Look at the Data Structure</h3>
+<pre class="code"><code><span class="n">uranus_sky</span><span class="o">.</span><span class="n">info</span><span class="p">()</span>
+</code></pre>
+<pre class="output">&lt;class &#x27;pandas.DataFrame&#x27;&gt;
+RangeIndex: 11449 entries, 0 to 11448
+Data columns (total 4 columns):
+ #   Column      Non-Null Count  Dtype  
+---  ------      --------------  -----  
+ 0   jd          11449 non-null  float64
+ 1   ra          11449 non-null  float64
+ 2   dec         11449 non-null  float64
+ 3   elongation  11449 non-null  float64
+dtypes: float64(4)
+memory usage: 357.9 KB</pre>
+<p>That's one position every 5 days for 156 years. But nobody observes a planet in daylight, and before 1781 nobody knew Uranus was a planet. So let's sample the data the way history would have. After Herschel's discovery, we keep one position every 10 days whenever Uranus is more than 60° from the Sun. Before 1781, we keep one position near opposition every 4 years, as stand-ins for the roughly twenty pre-discovery sightings:</p>
+<pre class="code"><code><span class="c1"># Uranus can only be measured at night: keep dates with the Sun &gt; 60° away, one every</span>
+<span class="c1"># 10 days after Herschel's discovery (13 March 1781). Before 1781 Uranus was logged a</span>
+<span class="c1"># few times as a "star": keep one opposition every 4 years as stand-ins for those</span>
+<span class="c1"># pre-discovery sightings.</span>
+<span class="n">year</span> <span class="o">=</span> <span class="p">(</span><span class="n">uranus_sky</span><span class="p">[</span><span class="s2">"jd"</span><span class="p">]</span> <span class="o">-</span> <span class="mf">2451545.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">365.25</span> <span class="o">+</span> <span class="mi">2000</span>
+<span class="n">modern</span> <span class="o">=</span> <span class="n">uranus_sky</span><span class="p">[(</span><span class="n">year</span> <span class="o">&gt;=</span> <span class="mf">1781.2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">uranus_sky</span><span class="p">[</span><span class="s2">"elongation"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">60</span><span class="p">)]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[::</span><span class="mi">2</span><span class="p">]</span>
+<span class="n">old</span> <span class="o">=</span> <span class="n">uranus_sky</span><span class="p">[(</span><span class="n">year</span> <span class="o">&lt;</span> <span class="mf">1781.2</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">uranus_sky</span><span class="p">[</span><span class="s2">"elongation"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">170</span><span class="p">)]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">old</span> <span class="o">=</span> <span class="n">old</span><span class="o">.</span><span class="n">groupby</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">year</span><span class="p">[</span><span class="n">old</span><span class="o">.</span><span class="n">index</span><span class="p">]</span> <span class="o">/</span> <span class="mi">4</span><span class="p">))</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">obs</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">old</span><span class="p">,</span> <span class="n">modern</span><span class="p">])</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="s2">"jd"</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">"year"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">"jd"</span><span class="p">]</span> <span class="o">-</span> <span class="mf">2451545.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">365.25</span> <span class="o">+</span> <span class="mi">2000</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">"era"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">"year"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mf">1781.2</span><span class="p">,</span> <span class="s2">"pre-discovery"</span><span class="p">,</span> <span class="s2">"after discovery"</span><span class="p">)</span>
+<span class="n">obs</span><span class="p">[</span><span class="s2">"era"</span><span class="p">]</span><span class="o">.</span><span class="n">value_counts</span><span class="p">()</span>
+</code></pre>
+<pre class="output">era
+after discovery    1563
+pre-discovery        24
+Name: count, dtype: int64</pre>
+<pre class="code"><code><span class="n">obs</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>jd</th>
+      <th>ra</th>
+      <th>dec</th>
+      <th>elongation</th>
+      <th>year</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>count</th>
+      <td>1.587000e+03</td>
+      <td>1587.000000</td>
+      <td>1587.000000</td>
+      <td>1587.000000</td>
+      <td>1587.000000</td>
+    </tr>
+    <tr>
+      <th>mean</th>
+      <td>2.383219e+06</td>
+      <td>216.599918</td>
+      <td>-4.984284</td>
+      <td>119.863926</td>
+      <td>1812.933755</td>
+    </tr>
+    <tr>
+      <th>std</th>
+      <td>7.803285e+03</td>
+      <td>93.147158</td>
+      <td>15.563188</td>
+      <td>35.089949</td>
+      <td>21.364230</td>
+    </tr>
+    <tr>
+      <th>min</th>
+      <td>2.338636e+06</td>
+      <td>0.031260</td>
+      <td>-23.706460</td>
+      <td>60.108500</td>
+      <td>1690.870637</td>
+    </tr>
+    <tr>
+      <th>25%</th>
+      <td>2.377436e+06</td>
+      <td>149.391680</td>
+      <td>-19.356165</td>
+      <td>89.015700</td>
+      <td>1797.099247</td>
+    </tr>
+    <tr>
+      <th>50%</th>
+      <td>2.383480e+06</td>
+      <td>221.258170</td>
+      <td>-8.270390</td>
+      <td>118.843300</td>
+      <td>1813.649555</td>
+    </tr>
+    <tr>
+      <th>75%</th>
+      <td>2.389570e+06</td>
+      <td>296.434250</td>
+      <td>6.435560</td>
+      <td>149.532100</td>
+      <td>1830.323066</td>
+    </tr>
+    <tr>
+      <th>max</th>
+      <td>2.395556e+06</td>
+      <td>359.746000</td>
+      <td>23.708110</td>
+      <td>179.943000</td>
+      <td>1846.709103</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+
+<h3 id="test-set">Create a Test Set</h3>
+<p>As in Chapter 1, nearby observations are strongly correlated, so a random split would leak. We group the observations by observing season (one per year, since Uranus is at opposition once a year) and hold out 20% of the seasons:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">GroupShuffleSplit</span>
+
+<span class="n">obs</span><span class="p">[</span><span class="s2">"apparition"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">"year"</span><span class="p">]</span> <span class="o">-</span> <span class="mf">0.3</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>   <span class="c1"># one observing season per year</span>
+<span class="n">splitter</span> <span class="o">=</span> <span class="n">GroupShuffleSplit</span><span class="p">(</span><span class="n">n_splits</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">test_size</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span> <span class="n">random_state</span><span class="o">=</span><span class="mi">42</span><span class="p">)</span>
+<span class="n">train_idx</span><span class="p">,</span> <span class="n">test_idx</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="n">splitter</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">obs</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">obs</span><span class="p">[</span><span class="s2">"apparition"</span><span class="p">]))</span>
+<span class="n">train_set</span><span class="p">,</span> <span class="n">test_set</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">train_idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">(),</span> <span class="n">obs</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">test_idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">train_set</span><span class="p">),</span> <span class="s2">"train,"</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">test_set</span><span class="p">),</span> <span class="s2">"test"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="s2">"pre-discovery points in test:"</span><span class="p">,</span> <span class="p">(</span><span class="n">test_set</span><span class="p">[</span><span class="s2">"era"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"pre-discovery"</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">())</span>
+</code></pre>
+<pre class="output">1296 train, 291 test
+pre-discovery points in test: 6</pre>
+
+<h2 id="discover">Discover and Visualize the Data to Gain Insights</h2>
+<h3 id="viz">Visualizing the Path of Uranus</h3>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">))</span>
+<span class="n">recent</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">"year"</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">1781</span><span class="p">]</span>
+<span class="n">sc</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">recent</span><span class="p">[</span><span class="s2">"ra"</span><span class="p">],</span> <span class="n">recent</span><span class="p">[</span><span class="s2">"dec"</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="n">recent</span><span class="p">[</span><span class="s2">"year"</span><span class="p">],</span> <span class="n">s</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">"viridis"</span><span class="p">)</span>
+<span class="n">old_pts</span> <span class="o">=</span> <span class="n">obs</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">"era"</span><span class="p">]</span> <span class="o">==</span> <span class="s2">"pre-discovery"</span><span class="p">]</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">old_pts</span><span class="p">[</span><span class="s2">"ra"</span><span class="p">],</span> <span class="n">old_pts</span><span class="p">[</span><span class="s2">"dec"</span><span class="p">],</span> <span class="n">c</span><span class="o">=</span><span class="s2">"red"</span><span class="p">,</span> <span class="n">s</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">marker</span><span class="o">=</span><span class="s2">"*"</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"pre-discovery"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">invert_xaxis</span><span class="p">()</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"right ascension (°)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"declination (°)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">sc</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"year"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"uranus_sky_path_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-sky"><img src="images/uranus_sky_path_plot.png" alt="The path of Uranus on the sky"><figcaption><b>Figure 3-1.</b> The path of Uranus on the sky, 1690–1846 (red stars: pre-discovery positions)</figcaption></figure>
+<p>Uranus takes 84 years to go around the zodiac, so over 156 years it makes almost two full turns. The sine-like shape is the ecliptic, drawn on equatorial coordinates. The yearly retrograde loops are too small to see at this scale. Nothing here looks wrong. The anomaly we're after is a few arcseconds on a path that spans 360°: a part in a million. Only a model can reveal it.</p>
+
+<h3 id="bode">Experimenting with Attribute Combinations: Bode's Law</h3>
+<p>If there is another planet, how far is it? In 1845 astronomers had a famous rule of thumb, the <em>Titius–Bode law</em>: planetary distances follow \(a \approx 0.4 + 0.3 \times 2^n\) AU, with \(n = -\infty, 0, 1, 2, \ldots\). It had "predicted" Uranus (\(n = 6\), 19.6 AU) and the asteroid Ceres (\(n = 3\)). Let's test it with a linear regression on a well-chosen attribute combination, \(\log_2((a - 0.4)/0.3)\) against \(n\):</p>
+<pre class="code"><code><span class="c1"># Semi-major axes known in 1845 (modern values, AU), with Titius-Bode index n</span>
+<span class="n">bode</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"a_AU"</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.387</span><span class="p">,</span> <span class="mf">0.723</span><span class="p">,</span> <span class="mf">1.000</span><span class="p">,</span> <span class="mf">1.524</span><span class="p">,</span> <span class="mf">2.77</span><span class="p">,</span> <span class="mf">5.203</span><span class="p">,</span> <span class="mf">9.537</span><span class="p">,</span> <span class="mf">19.19</span><span class="p">],</span>
+                     <span class="s2">"n"</span><span class="p">:</span> <span class="p">[</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">]},</span>
+                    <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"Mercury"</span><span class="p">,</span> <span class="s2">"Venus"</span><span class="p">,</span> <span class="s2">"Earth"</span><span class="p">,</span> <span class="s2">"Mars"</span><span class="p">,</span> <span class="s2">"Ceres"</span><span class="p">,</span> <span class="s2">"Jupiter"</span><span class="p">,</span>
+                           <span class="s2">"Saturn"</span><span class="p">,</span> <span class="s2">"Uranus"</span><span class="p">])</span>
+<span class="n">bode</span><span class="p">[</span><span class="s2">"bode_rule"</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.4</span> <span class="o">+</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="mf">2.0</span> <span class="o">**</span> <span class="n">bode</span><span class="p">[</span><span class="s2">"n"</span><span class="p">]</span>
+<span class="n">bode</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>a_AU</th>
+      <th>n</th>
+      <th>bode_rule</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Mercury</th>
+      <td>0.387</td>
+      <td>-inf</td>
+      <td>0.4</td>
+    </tr>
+    <tr>
+      <th>Venus</th>
+      <td>0.723</td>
+      <td>0.0</td>
+      <td>0.7</td>
+    </tr>
+    <tr>
+      <th>Earth</th>
+      <td>1.000</td>
+      <td>1.0</td>
+      <td>1.0</td>
+    </tr>
+    <tr>
+      <th>Mars</th>
+      <td>1.524</td>
+      <td>2.0</td>
+      <td>1.6</td>
+    </tr>
+    <tr>
+      <th>Ceres</th>
+      <td>2.770</td>
+      <td>3.0</td>
+      <td>2.8</td>
+    </tr>
+    <tr>
+      <th>Jupiter</th>
+      <td>5.203</td>
+      <td>4.0</td>
+      <td>5.2</td>
+    </tr>
+    <tr>
+      <th>Saturn</th>
+      <td>9.537</td>
+      <td>5.0</td>
+      <td>10.0</td>
+    </tr>
+    <tr>
+      <th>Uranus</th>
+      <td>19.190</td>
+      <td>6.0</td>
+      <td>19.6</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.linear_model</span><span class="w"> </span><span class="kn">import</span> <span class="n">LinearRegression</span>
+
+<span class="n">fit_rows</span> <span class="o">=</span> <span class="n">bode</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">bode</span><span class="p">[</span><span class="s2">"n"</span><span class="p">])]</span>
+<span class="n">X_bode</span> <span class="o">=</span> <span class="n">fit_rows</span><span class="p">[[</span><span class="s2">"n"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span>
+<span class="n">y_bode</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log2</span><span class="p">((</span><span class="n">fit_rows</span><span class="p">[</span><span class="s2">"a_AU"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="mf">0.4</span><span class="p">)</span> <span class="o">/</span> <span class="mf">0.3</span><span class="p">)</span>    <span class="c1"># attribute combination</span>
+<span class="n">bode_reg</span> <span class="o">=</span> <span class="n">LinearRegression</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_bode</span><span class="p">,</span> <span class="n">y_bode</span><span class="p">)</span>
+<span class="n">n_next</span> <span class="o">=</span> <span class="mi">7</span>
+<span class="n">a_next</span> <span class="o">=</span> <span class="mf">0.4</span> <span class="o">+</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">**</span> <span class="n">bode_reg</span><span class="o">.</span><span class="n">predict</span><span class="p">([[</span><span class="n">n_next</span><span class="p">]])[</span><span class="mi">0</span><span class="p">]</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"slope = </span><span class="si">{</span><span class="n">bode_reg</span><span class="o">.</span><span class="n">coef_</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">:</span><span class="s2">.3f</span><span class="si">}</span><span class="s2">, predicted distance of the next planet: </span><span class="si">{</span><span class="n">a_next</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> AU"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">slope = 0.984, predicted distance of the next planet: 36.7 AU</pre>
+<p>The slope is almost exactly 1, so the "law" fits beautifully, and it predicts the next planet at about 37–39 AU. Le Verrier and his English rival John Couch Adams both started from a distance like this. Keep this number in mind: we will soon see whether the data agree.</p>
+<div class="admon warning"><div class="icon">!</div><div class="body"><p>A pattern that fits 7 points with a 2-parameter formula is not necessarily a law of nature. Bode's law has no physical basis, and it fails for Neptune (and for Pluto). This is a historical case of overfitting a pattern and extrapolating it. We will let it set a <em>starting point</em>, not the answer.</p></div></div>
+
+<h2 id="prepare">Prepare the Data for Machine Learning Algorithms</h2>
+<p>Our simulator works in the ecliptic frame, so let's convert the targets from equatorial RA/Dec to ecliptic longitude and latitude. That is a rotation by the obliquity ε about the x axis (the inverse of Equation 1-1):</p>
+<pre class="code"><code><span class="n">EPS_J2000</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="mf">23.4392911</span><span class="p">)</span>          <span class="c1"># obliquity of the ecliptic at J2000</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">radec_to_ecliptic</span><span class="p">(</span><span class="n">ra_deg</span><span class="p">,</span> <span class="n">dec_deg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Equatorial (ICRF) RA/Dec -&gt; ecliptic longitude and latitude (radians)."""</span>
+    <span class="n">ra</span><span class="p">,</span> <span class="n">dec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">ra_deg</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">dec_deg</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">dec</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">ra</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">dec</span><span class="p">)</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">ra</span><span class="p">)</span>
+    <span class="n">z</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">dec</span><span class="p">)</span>
+    <span class="n">c</span><span class="p">,</span> <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">EPS_J2000</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">EPS_J2000</span><span class="p">)</span>
+    <span class="n">ye</span><span class="p">,</span> <span class="n">ze</span> <span class="o">=</span> <span class="n">c</span> <span class="o">*</span> <span class="n">y</span> <span class="o">+</span> <span class="n">s</span> <span class="o">*</span> <span class="n">z</span><span class="p">,</span> <span class="o">-</span><span class="n">s</span> <span class="o">*</span> <span class="n">y</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">z</span>               <span class="c1"># rotate about the x axis</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">ye</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">ze</span><span class="p">)</span>
+
+<span class="n">obs</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">],</span> <span class="n">obs</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span> <span class="o">=</span> <span class="n">radec_to_ecliptic</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">"ra"</span><span class="p">],</span> <span class="n">obs</span><span class="p">[</span><span class="s2">"dec"</span><span class="p">])</span>
+<span class="n">train_set</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">train_idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">test_set</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">test_idx</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+<span class="n">obs</span><span class="p">[[</span><span class="s2">"year"</span><span class="p">,</span> <span class="s2">"ra"</span><span class="p">,</span> <span class="s2">"dec"</span><span class="p">,</span> <span class="s2">"lon"</span><span class="p">,</span> <span class="s2">"lat"</span><span class="p">]]</span><span class="o">.</span><span class="n">head</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>year</th>
+      <th>ra</th>
+      <th>dec</th>
+      <th>lon</th>
+      <th>lat</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>0</th>
+      <td>1690.870637</td>
+      <td>62.04035</td>
+      <td>20.80414</td>
+      <td>1.117110</td>
+      <td>-0.002574</td>
+    </tr>
+    <tr>
+      <th>1</th>
+      <td>1692.896646</td>
+      <td>71.04406</td>
+      <td>22.26945</td>
+      <td>1.265462</td>
+      <td>-0.000453</td>
+    </tr>
+    <tr>
+      <th>2</th>
+      <td>1696.948665</td>
+      <td>89.85770</td>
+      <td>23.66057</td>
+      <td>1.568521</td>
+      <td>0.003863</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>The simulator also needs the positions of the Earth, Jupiter and Saturn at <em>any</em> time, not just every 4 days, because the integrator chooses its own time steps. Cubic splines interpolate them smoothly and accurately:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.interpolate</span><span class="w"> </span><span class="kn">import</span> <span class="n">CubicSpline</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">spline</span><span class="p">(</span><span class="n">vec</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">CubicSpline</span><span class="p">(</span><span class="n">vec</span><span class="p">[</span><span class="s2">"jd"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">vec</span><span class="p">[[</span><span class="s2">"x"</span><span class="p">,</span> <span class="s2">"y"</span><span class="p">,</span> <span class="s2">"z"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+
+<span class="n">earth_pos</span><span class="p">,</span> <span class="n">jupiter_pos</span><span class="p">,</span> <span class="n">saturn_pos</span> <span class="o">=</span> <span class="n">spline</span><span class="p">(</span><span class="n">earth</span><span class="p">),</span> <span class="n">spline</span><span class="p">(</span><span class="n">jupiter</span><span class="p">),</span> <span class="n">spline</span><span class="p">(</span><span class="n">saturn</span><span class="p">)</span>
+<span class="n">earth_pos</span><span class="p">(</span><span class="mf">2451545.0</span><span class="p">)</span>          <span class="c1"># where the Earth was on 1 Jan 2000 (AU)</span>
+</code></pre>
+<pre class="output">array([ 1.47009600e+08,  1.93792894e+07, -6.60154786e+05])</pre>
+
+<h2 id="train">Select and Train a Model</h2>
+<h3 id="simulator">A Model That Simulates Gravity</h3>
+<p>Here is the heart of the chapter: Equation 3-1 as code, a numerical integrator (SciPy's <code>solve_ivp</code> with the high-order <code>DOP853</code> method), and the conversion from a simulated position to what an observer on Earth would measure, including the light-time correction:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">scipy.integrate</span><span class="w"> </span><span class="kn">import</span> <span class="n">solve_ivp</span>
+
+<span class="n">K2</span> <span class="o">=</span> <span class="mf">0.01720209895</span> <span class="o">**</span> <span class="mi">2</span>         <span class="c1"># G * M_sun in AU³/day² (Gauss's constant squared)</span>
+<span class="n">M_JUPITER</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">1047.348644</span>     <span class="c1"># masses in solar masses: known in 1845 from their moons</span>
+<span class="n">M_SATURN</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">3497.9018</span>
+<span class="n">M_URANUS</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">22902.98</span>
+<span class="n">LIGHT_DAYS_PER_AU</span> <span class="o">=</span> <span class="mf">0.0057755183</span>
+<span class="n">T_EPOCH</span> <span class="o">=</span> <span class="mf">2366000.5</span>             <span class="c1"># 1765: the middle of the data</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">acceleration</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">perturbers</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Heliocentric acceleration of Uranus: the Sun + each perturber (direct and</span>
+<span class="sd">    indirect terms: the perturber also pulls the Sun, our moving origin)."""</span>
+    <span class="n">acc</span> <span class="o">=</span> <span class="o">-</span><span class="n">K2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">M_URANUS</span><span class="p">)</span> <span class="o">*</span> <span class="n">r</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span>
+    <span class="k">for</span> <span class="n">position</span><span class="p">,</span> <span class="n">mass</span> <span class="ow">in</span> <span class="n">perturbers</span><span class="p">:</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="n">position</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">p</span> <span class="o">-</span> <span class="n">r</span>
+        <span class="n">acc</span> <span class="o">+=</span> <span class="n">K2</span> <span class="o">*</span> <span class="n">mass</span> <span class="o">*</span> <span class="p">(</span><span class="n">d</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">d</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span> <span class="o">-</span> <span class="n">p</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">p</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">acc</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">integrate_orbit</span><span class="p">(</span><span class="n">state0</span><span class="p">,</span> <span class="n">perturbers</span><span class="p">,</span> <span class="n">t_min</span><span class="p">,</span> <span class="n">t_max</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Integrate Uranus forward and backward from the epoch; returns a function of time."""</span>
+    <span class="n">rhs</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">y</span><span class="p">[</span><span class="mi">3</span><span class="p">:],</span> <span class="n">acceleration</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">y</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">perturbers</span><span class="p">)]</span>
+    <span class="n">opts</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">(</span><span class="n">method</span><span class="o">=</span><span class="s2">"DOP853"</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">1e-10</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1e-12</span><span class="p">,</span> <span class="n">dense_output</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">fwd</span> <span class="o">=</span> <span class="n">solve_ivp</span><span class="p">(</span><span class="n">rhs</span><span class="p">,</span> <span class="p">(</span><span class="n">T_EPOCH</span><span class="p">,</span> <span class="n">t_max</span> <span class="o">+</span> <span class="mi">5</span><span class="p">),</span> <span class="n">state0</span><span class="p">,</span> <span class="o">**</span><span class="n">opts</span><span class="p">)</span>
+    <span class="n">bwd</span> <span class="o">=</span> <span class="n">solve_ivp</span><span class="p">(</span><span class="n">rhs</span><span class="p">,</span> <span class="p">(</span><span class="n">T_EPOCH</span><span class="p">,</span> <span class="n">t_min</span> <span class="o">-</span> <span class="mi">5</span><span class="p">),</span> <span class="n">state0</span><span class="p">,</span> <span class="o">**</span><span class="n">opts</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">state</span><span class="p">(</span><span class="n">t</span><span class="p">):</span>
+        <span class="n">t</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">atleast_1d</span><span class="p">(</span><span class="n">t</span><span class="p">)</span>
+        <span class="n">out</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="mi">6</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">t</span><span class="p">)))</span>
+        <span class="n">after</span> <span class="o">=</span> <span class="n">t</span> <span class="o">&gt;=</span> <span class="n">T_EPOCH</span>
+        <span class="k">if</span> <span class="n">after</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">out</span><span class="p">[:,</span> <span class="n">after</span><span class="p">]</span> <span class="o">=</span> <span class="n">fwd</span><span class="o">.</span><span class="n">sol</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="n">after</span><span class="p">])</span>
+        <span class="k">if</span> <span class="p">(</span><span class="o">~</span><span class="n">after</span><span class="p">)</span><span class="o">.</span><span class="n">any</span><span class="p">():</span>
+            <span class="n">out</span><span class="p">[:,</span> <span class="o">~</span><span class="n">after</span><span class="p">]</span> <span class="o">=</span> <span class="n">bwd</span><span class="o">.</span><span class="n">sol</span><span class="p">(</span><span class="n">t</span><span class="p">[</span><span class="o">~</span><span class="n">after</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">out</span>
+    <span class="k">return</span> <span class="n">state</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">predict_sky</span><span class="p">(</span><span class="n">state0</span><span class="p">,</span> <span class="n">perturbers</span><span class="p">,</span> <span class="n">jd</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Geocentric ecliptic longitude/latitude of Uranus (with light-time correction)."""</span>
+    <span class="n">s</span> <span class="o">=</span> <span class="n">integrate_orbit</span><span class="p">(</span><span class="n">state0</span><span class="p">,</span> <span class="n">perturbers</span><span class="p">,</span> <span class="n">jd</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span> <span class="n">jd</span><span class="o">.</span><span class="n">max</span><span class="p">())(</span><span class="n">jd</span><span class="p">)</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">s</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span> <span class="o">-</span> <span class="n">earth_pos</span><span class="p">(</span><span class="n">jd</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>                       <span class="c1"># Earth -&gt; Uranus</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">g</span> <span class="o">-</span> <span class="n">s</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">g</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">LIGHT_DAYS_PER_AU</span>   <span class="c1"># where it WAS</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">%</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">hypot</span><span class="p">(</span><span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">]))</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">o_minus_c</span><span class="p">(</span><span class="n">state0</span><span class="p">,</span> <span class="n">perturbers</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""'Observed minus computed' in arcseconds: on-sky longitude, latitude."""</span>
+    <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span> <span class="o">=</span> <span class="n">predict_sky</span><span class="p">(</span><span class="n">state0</span><span class="p">,</span> <span class="n">perturbers</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s2">"jd"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">dlon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">angle</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="mi">1</span><span class="n">j</span> <span class="o">*</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">lon</span><span class="p">)))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">dlon</span><span class="p">,</span> <span class="n">data</span><span class="p">[</span><span class="s2">"lat"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">lat</span><span class="p">]</span> <span class="o">*</span> <span class="mi">206265</span>
+</code></pre>
+<p>The integrator starts from a state vector (3 positions and 3 velocities) at the epoch 1765. It runs forward to 1846 and backward to 1690. Those six numbers are our model's parameters. To start the optimizer somewhere sensible, we use Kepler's third law: an 84-year period means a distance of \(84^{2/3} \approx 19.2\) AU. We place Uranus on a circular orbit at the longitude where it was seen at the opposition nearest to 1765:</p>
+<pre class="code"><code><span class="c1"># A rough starting guess: a circular orbit, in the ecliptic, at Kepler's distance for an</span>
+<span class="c1"># 84-year period, at the longitude where Uranus was seen at the opposition nearest 1765.</span>
+<span class="n">a0</span> <span class="o">=</span> <span class="p">(</span><span class="mf">84.0</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)</span>                                   <span class="c1"># Kepler III, AU</span>
+<span class="n">near</span> <span class="o">=</span> <span class="n">obs</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">obs</span><span class="p">[</span><span class="s2">"jd"</span><span class="p">]</span> <span class="o">-</span> <span class="n">T_EPOCH</span><span class="p">)</span><span class="o">.</span><span class="n">abs</span><span class="p">()</span><span class="o">.</span><span class="n">idxmin</span><span class="p">()]</span>
+<span class="n">L0</span> <span class="o">=</span> <span class="n">near</span><span class="p">[</span><span class="s2">"lon"</span><span class="p">]</span>
+<span class="n">v0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">K2</span> <span class="o">/</span> <span class="n">a0</span><span class="p">)</span>
+<span class="n">state_guess</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">L0</span><span class="p">),</span> <span class="n">a0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">L0</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">,</span>
+                        <span class="o">-</span><span class="n">v0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">L0</span><span class="p">),</span> <span class="n">v0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">L0</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"a ≈ </span><span class="si">{</span><span class="n">a0</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> AU, starting longitude </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">L0</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">a ≈ 19.18 AU, starting longitude 22.7°</pre>
+<p>And as usual we wrap it in a Scikit-Learn estimator. The <code>perturbers</code> hyperparameter selects which planets pull on Uranus. <code>fit()</code> minimizes the O − C with <code>least_squares()</code>, and <code>score()</code> returns minus the RMS:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">RegressorMixin</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.optimize</span><span class="w"> </span><span class="kn">import</span> <span class="n">least_squares</span>
+
+<span class="n">STATE_SCALE</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1e-3</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1e-6</span><span class="p">)]</span>    <span class="c1"># AU and AU/day</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">UranusOrbitRegressor</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">RegressorMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Fits the position and velocity of Uranus in 1765 so that the simulated planet,</span>
+<span class="sd">    pulled by the Sun and the given perturbers, matches the observed sky positions."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">perturbers</span><span class="o">=</span><span class="s2">"sun"</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">perturbers</span> <span class="o">=</span> <span class="n">perturbers</span>            <span class="c1"># 'sun' or 'sun+jupiter+saturn'</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="o">=</span> <span class="n">init</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_bodies</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">perturbers</span> <span class="o">==</span> <span class="s2">"sun"</span><span class="p">:</span>
+            <span class="k">return</span> <span class="p">[]</span>
+        <span class="k">return</span> <span class="p">[(</span><span class="n">jupiter_pos</span><span class="p">,</span> <span class="n">M_JUPITER</span><span class="p">),</span> <span class="p">(</span><span class="n">saturn_pos</span><span class="p">,</span> <span class="n">M_SATURN</span><span class="p">)]</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">state_guess</span> <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span> <span class="ow">is</span> <span class="kc">None</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">init</span>
+        <span class="n">res</span> <span class="o">=</span> <span class="n">least_squares</span><span class="p">(</span><span class="n">o_minus_c</span><span class="p">,</span> <span class="n">start</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_bodies</span><span class="p">(),</span> <span class="n">X</span><span class="p">),</span>
+                            <span class="n">x_scale</span><span class="o">=</span><span class="n">STATE_SCALE</span><span class="p">,</span> <span class="n">diff_step</span><span class="o">=</span><span class="mf">1e-7</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">state_</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">x</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">residuals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">o_minus_c</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">state_</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_bodies</span><span class="p">(),</span> <span class="n">X</span><span class="p">)</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">score</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">residuals</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>      <span class="c1"># minus RMS O-C (arcsec)</span>
+</code></pre>
+
+<h3 id="training">Training and Evaluating on the Training Set</h3>
+<p>First, the simplest model, Uranus pulled by the Sun alone:</p>
+<pre class="code"><code><span class="n">sun_only</span> <span class="o">=</span> <span class="n">UranusOrbitRegressor</span><span class="p">(</span><span class="s2">"sun"</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_set</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Sun only: RMS O-C = </span><span class="si">{</span><span class="o">-</span><span class="n">sun_only</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">train_set</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> arcsec"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">Sun only: RMS O-C = 31.2 arcsec</pre>
+<p>An RMS of 31″ is far worse than the observations' precision. The model underfits: it is missing physics. Let's add Jupiter and Saturn, as Bouvard did, starting from the Sun-only solution:</p>
+<pre class="code"><code><span class="n">bouvard</span> <span class="o">=</span> <span class="n">UranusOrbitRegressor</span><span class="p">(</span><span class="s2">"sun+jupiter+saturn"</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">sun_only</span><span class="o">.</span><span class="n">state_</span><span class="p">)</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">train_set</span><span class="p">)</span>
+<span class="n">r</span> <span class="o">=</span> <span class="n">bouvard</span><span class="o">.</span><span class="n">residuals</span><span class="p">(</span><span class="n">train_set</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Sun + Jupiter + Saturn: RMS O-C = </span><span class="si">{</span><span class="o">-</span><span class="n">bouvard</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">train_set</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> arcsec, "</span>
+      <span class="sa">f</span><span class="s2">"max = </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">r</span><span class="p">)</span><span class="o">.</span><span class="n">max</span><span class="p">()</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> arcsec"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">Sun + Jupiter + Saturn: RMS O-C = 12.4 arcsec, max = 144.1 arcsec</pre>
+<p>The RMS drops to about 12″, but the worst residual is 144″, almost two and a half arcminutes. That's much too big. Still, the orbit itself is sensible:</p>
+<pre class="code"><code><span class="k">def</span><span class="w"> </span><span class="nf">orbital_elements</span><span class="p">(</span><span class="n">state</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Semi-major axis, eccentricity, inclination from a heliocentric state vector."""</span>
+    <span class="n">r</span><span class="p">,</span> <span class="n">v</span> <span class="o">=</span> <span class="n">state</span><span class="p">[:</span><span class="mi">3</span><span class="p">],</span> <span class="n">state</span><span class="p">[</span><span class="mi">3</span><span class="p">:]</span>
+    <span class="n">mu</span> <span class="o">=</span> <span class="n">K2</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">M_URANUS</span><span class="p">)</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="mi">2</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">r</span><span class="p">)</span> <span class="o">-</span> <span class="n">v</span> <span class="o">@</span> <span class="n">v</span> <span class="o">/</span> <span class="n">mu</span><span class="p">)</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">v</span><span class="p">)</span>
+    <span class="n">e</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">cross</span><span class="p">(</span><span class="n">v</span><span class="p">,</span> <span class="n">h</span><span class="p">)</span> <span class="o">/</span> <span class="n">mu</span> <span class="o">-</span> <span class="n">r</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">r</span><span class="p">))</span>
+    <span class="n">inc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">h</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">h</span><span class="p">)))</span>
+    <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">({</span><span class="s2">"a (AU)"</span><span class="p">:</span> <span class="n">a</span><span class="p">,</span> <span class="s2">"e"</span><span class="p">:</span> <span class="n">e</span><span class="p">,</span> <span class="s2">"i (deg)"</span><span class="p">:</span> <span class="n">inc</span><span class="p">,</span>
+                      <span class="s2">"period (yr)"</span><span class="p">:</span> <span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">mu</span> <span class="o">/</span> <span class="n">a</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span> <span class="o">/</span> <span class="mf">365.25</span><span class="p">})</span>
+
+<span class="n">orbital_elements</span><span class="p">(</span><span class="n">bouvard</span><span class="o">.</span><span class="n">state_</span><span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+</code></pre>
+<pre class="output">a (AU)         19.2184
+e               0.0471
+i (deg)         0.7792
+period (yr)    84.2511
+dtype: float64</pre>
+<p>A semi-major axis of 19.2 AU, an eccentricity of 0.047, an 84-year period: these are the textbook values for Uranus.</p>
+
+<h3 id="cv">Better Evaluation Using Cross-Validation</h3>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">GroupKFold</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">cross_val_rms</span><span class="p">(</span><span class="n">make_model</span><span class="p">,</span> <span class="n">data</span><span class="p">,</span> <span class="n">n_splits</span><span class="o">=</span><span class="mi">5</span><span class="p">):</span>
+    <span class="n">scores</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">tr</span><span class="p">,</span> <span class="n">va</span> <span class="ow">in</span> <span class="n">GroupKFold</span><span class="p">(</span><span class="n">n_splits</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">data</span><span class="p">[</span><span class="s2">"apparition"</span><span class="p">]):</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">make_model</span><span class="p">()</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">tr</span><span class="p">])</span>
+        <span class="n">scores</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="o">-</span><span class="n">model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">va</span><span class="p">]))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">scores</span><span class="p">)</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">display_scores</span><span class="p">(</span><span class="n">scores</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Scores:"</span><span class="p">,</span> <span class="n">scores</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"Mean:"</span><span class="p">,</span> <span class="n">scores</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">),</span> <span class="s2">" Standard deviation:"</span><span class="p">,</span> <span class="n">scores</span><span class="o">.</span><span class="n">std</span><span class="p">()</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">3</span><span class="p">))</span>
+
+<span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">make</span> <span class="ow">in</span> <span class="p">[(</span><span class="s2">"Sun only"</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="n">UranusOrbitRegressor</span><span class="p">(</span><span class="s2">"sun"</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">sun_only</span><span class="o">.</span><span class="n">state_</span><span class="p">)),</span>
+                   <span class="p">(</span><span class="s2">"Sun + Jupiter + Saturn"</span><span class="p">,</span>
+                    <span class="k">lambda</span><span class="p">:</span> <span class="n">UranusOrbitRegressor</span><span class="p">(</span><span class="s2">"sun+jupiter+saturn"</span><span class="p">,</span> <span class="n">init</span><span class="o">=</span><span class="n">bouvard</span><span class="o">.</span><span class="n">state_</span><span class="p">))]:</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"---"</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="s2">"---"</span><span class="p">);</span> <span class="n">display_scores</span><span class="p">(</span><span class="n">cross_val_rms</span><span class="p">(</span><span class="n">make</span><span class="p">,</span> <span class="n">train_set</span><span class="p">))</span>
+</code></pre>
+<pre class="output">--- Sun only ---
+Scores: [36.76 30.26 33.11 29.86 32.36]
+Mean: 32.469  Standard deviation: 2.471
+--- Sun + Jupiter + Saturn ---
+Scores: [10.46  8.72 15.45 17.88 15.92]
+Mean: 13.687  Standard deviation: 3.485</pre>
+<p>Cross-validation confirms it: adding Jupiter and Saturn helps a lot, but the error on unseen seasons stays at about 14″, ten times larger than what good observations would allow. Something is still missing.</p>
+
+<h3 id="anomaly">The Anomaly</h3>
+<p>Whenever a model plateaus, do what you should always do: <em>look at the residuals</em> (<a href="#fig-oc">Figure 3-2</a>).</p>
+<pre class="code"><code><span class="k">def</span><span class="w"> </span><span class="nf">plot_o_minus_c</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">resid</span><span class="p">,</span> <span class="n">ax</span><span class="p">,</span> <span class="n">label</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">):</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">"year"</span><span class="p">],</span> <span class="n">resid</span><span class="p">[:</span><span class="n">n</span><span class="p">],</span> <span class="s2">"."</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="n">label</span><span class="p">,</span> <span class="o">**</span><span class="n">kw</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mf">4.5</span><span class="p">))</span>
+<span class="n">plot_o_minus_c</span><span class="p">(</span><span class="n">train_set</span><span class="p">,</span> <span class="n">bouvard</span><span class="o">.</span><span class="n">residuals</span><span class="p">(</span><span class="n">train_set</span><span class="p">),</span> <span class="n">ax</span><span class="p">,</span> <span class="s2">"O − C in longitude"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">axvline</span><span class="p">(</span><span class="mf">1781.2</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"gray"</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="s2">"--"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="mi">1782</span><span class="p">,</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_ylim</span><span class="p">()[</span><span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.85</span><span class="p">,</span> <span class="s2">"Herschel 1781"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"year"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"observed − computed (arcsec)"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"uranus_o_minus_c_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-oc"><img src="images/uranus_o_minus_c_plot.png" alt="O - C of Uranus without planet X"><figcaption><b>Figure 3-2.</b> Residuals in longitude of the best orbit with the Sun, Jupiter and Saturn. Left of the dashed line: pre-discovery positions.</figcaption></figure>
+<p>This is not noise. Noise would scatter randomly around zero. These residuals form smooth, slow waves:</p>
+<ul>
+<li>The pre-discovery positions (left) fall up to 2.4′ <em>behind</em> the model. That is Bouvard's problem: no orbit fits both the old and new observations. He decided the old ones must be wrong and threw them away.</li>
+<li>After 1781, the residuals oscillate with an amplitude of about 20″. Uranus first runs <em>ahead</em> of the model, then falls behind after the 1820s. By 1846 it drifts quickly away.</li>
+</ul>
+<div class="admon tip"><div class="icon">Tip</div><div class="body"><p>Bouvard's decision is a classic data science mistake: he removed the data that disagreed with his model and called them outliers. Before dropping "bad" data, ask whether a <em>better model</em> could explain them. Outliers that are smooth in time, and consistent across independent observers, are rarely errors.</p></div></div>
+<p>What could cause such a pattern? A planet pulls hardest when it is closest. Picture an outer planet X, moving more slowly than Uranus on a larger orbit. Before Uranus catches up with it, X pulls Uranus forward, so Uranus runs ahead. After Uranus passes it, X pulls it back. The turnaround in the residuals in the 1820s suggests that Uranus overtook X around then. That is a first rough fix on where X must be.</p>
+
+<h2 id="tune">Fine-Tune Your Model: Searching for Planet X</h2>
+<p>Now we add a third perturber with unknown properties. Following Le Verrier, X has a circular orbit in the ecliptic, so it has three unknowns: its distance \(a\), its longitude \(\lambda_0\) at the epoch, and its mass \(m\). The speed of X follows from Kepler's third law. We also have to re-fit the six parameters of Uranus, since a new perturber changes the best orbit. That's nine parameters in a very non-linear model, with many local minima. How do we search efficiently?</p>
+
+<h3 id="linearize">A Linear Model of the Unknown</h3>
+<p>Here is the trick, and Le Verrier used a version of it. The perturbations are tiny, so the residuals respond <em>linearly</em> to small changes. A small nudge to the starting state of Uranus changes the O − C by an amount proportional to the nudge. We compute these six "nudge" responses once, by finite differences, as the columns of a <em>Jacobian</em> matrix:</p>
+<pre class="code"><code><span class="c1"># Linearize around Bouvard's solution: how does O-C change if we nudge Uranus's state?</span>
+<span class="n">base_resid</span> <span class="o">=</span> <span class="n">bouvard</span><span class="o">.</span><span class="n">residuals</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+<span class="n">steps</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1e-5</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mf">1e-8</span><span class="p">)]</span>
+<span class="n">jacobian</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">column_stack</span><span class="p">([</span>
+    <span class="p">(</span><span class="n">o_minus_c</span><span class="p">(</span><span class="n">bouvard</span><span class="o">.</span><span class="n">state_</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="mi">6</span><span class="p">)[</span><span class="n">k</span><span class="p">]</span> <span class="o">*</span> <span class="n">steps</span><span class="p">[</span><span class="n">k</span><span class="p">],</span> <span class="n">bouvard</span><span class="o">.</span><span class="n">_bodies</span><span class="p">(),</span> <span class="n">obs</span><span class="p">)</span> <span class="o">-</span> <span class="n">base_resid</span><span class="p">)</span> <span class="o">/</span> <span class="n">steps</span><span class="p">[</span><span class="n">k</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">6</span><span class="p">)])</span>
+<span class="n">jacobian</span><span class="o">.</span><span class="n">shape</span>
+</code></pre>
+<pre class="output">(3174, 6)</pre>
+<p>And for a given \(a\) and \(\lambda_0\), the pull of planet X is proportional to its mass. We simulate X once with a small probe mass. The resulting change in O − C, divided by that mass, is the planet's "signature": one new feature column. The model is now <em>linear</em> in its 7 unknowns (6 nudges and the mass), so ordinary linear regression solves it exactly, in a millisecond:</p>
+<div class="equation"><div class="eq-caption"><b>Equation 3-3.</b> The linearized model</div>
+$$-\,\text{(O − C)}_{\text{Bouvard}} \;\approx\; \sum_{k=1}^{6} \delta_k\,\frac{\partial\,(\text{O − C})}{\partial s_k} \;+\; m\;\mathbf{f}_X(a, \lambda_0)$$</div>
+<p>This is pure feature engineering. The physics goes into the features. Let's write a Scikit-Learn transformer that produces them for given \(a\) and \(\lambda_0\), with a cache so each candidate planet is simulated only once:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.base</span><span class="w"> </span><span class="kn">import</span> <span class="n">TransformerMixin</span>
+
+<span class="n">M_PROBE</span> <span class="o">=</span> <span class="mf">1e-4</span>              <span class="c1"># a probe mass (solar masses): the response is ~linear in mass</span>
+<span class="n">_x_cache</span> <span class="o">=</span> <span class="p">{}</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">planet_x_position</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">lon0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Circular orbit in the ecliptic (Le Verrier's assumption), Kepler III for the speed."""</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">K2</span> <span class="o">/</span> <span class="n">a</span> <span class="o">**</span> <span class="mi">3</span><span class="p">)</span>
+    <span class="k">return</span> <span class="k">lambda</span> <span class="n">t</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="n">a</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">lon0</span> <span class="o">+</span> <span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">T_EPOCH</span><span class="p">)),</span>
+                               <span class="n">a</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">lon0</span> <span class="o">+</span> <span class="n">n</span> <span class="o">*</span> <span class="p">(</span><span class="n">t</span> <span class="o">-</span> <span class="n">T_EPOCH</span><span class="p">)),</span> <span class="mf">0.0</span><span class="p">])</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">planet_x_signature</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">lon0_deg</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Change in O-C (per solar mass of planet X) for every observation."""</span>
+    <span class="n">key</span> <span class="o">=</span> <span class="p">(</span><span class="nb">round</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="nb">round</span><span class="p">(</span><span class="n">lon0_deg</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">_x_cache</span><span class="p">:</span>
+        <span class="n">bodies</span> <span class="o">=</span> <span class="n">bouvard</span><span class="o">.</span><span class="n">_bodies</span><span class="p">()</span> <span class="o">+</span> <span class="p">[(</span><span class="n">planet_x_position</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">lon0_deg</span><span class="p">)),</span> <span class="n">M_PROBE</span><span class="p">)]</span>
+        <span class="n">_x_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">o_minus_c</span><span class="p">(</span><span class="n">bouvard</span><span class="o">.</span><span class="n">state_</span><span class="p">,</span> <span class="n">bodies</span><span class="p">,</span> <span class="n">obs</span><span class="p">)</span> <span class="o">-</span> <span class="n">base_resid</span><span class="p">)</span> <span class="o">/</span> <span class="n">M_PROBE</span>
+    <span class="k">return</span> <span class="n">_x_cache</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">PlanetXFeatures</span><span class="p">(</span><span class="n">BaseEstimator</span><span class="p">,</span> <span class="n">TransformerMixin</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">"""Rows = measured numbers (index into the stacked O-C vector).</span>
+<span class="sd">    Features = 6 'nudge Uranus' columns + 1 'planet X at (a, lon0)' column."""</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">a</span><span class="o">=</span><span class="mf">36.0</span><span class="p">,</span> <span class="n">lon0</span><span class="o">=</span><span class="mf">0.0</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">a</span> <span class="o">=</span> <span class="n">a</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lon0</span> <span class="o">=</span> <span class="n">lon0</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fit</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">__sklearn_is_fitted__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="kc">True</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">transform</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">):</span>
+        <span class="n">rows</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">X</span><span class="p">)</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">c_</span><span class="p">[</span><span class="n">jacobian</span><span class="p">[</span><span class="n">rows</span><span class="p">],</span> <span class="n">planet_x_signature</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">a</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">lon0</span><span class="p">)[</span><span class="n">rows</span><span class="p">]]</span>
+</code></pre>
+<p>Each observation gives two numbers (longitude and latitude O − C), so we stack them. Each row of <code>X</code> is just an index into the stacked vector, and the target is the part of the residual that the corrections must explain:</p>
+<pre class="code"><code><span class="c1"># Each observation gives two numbers (longitude and latitude O-C).</span>
+<span class="n">n_obs</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+<span class="n">rows_of</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">idx</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span> <span class="o">+</span> <span class="n">n_obs</span><span class="p">]</span>
+<span class="n">X_train_rows</span> <span class="o">=</span> <span class="n">rows_of</span><span class="p">(</span><span class="n">train_idx</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">y_train</span> <span class="o">=</span> <span class="o">-</span><span class="n">base_resid</span><span class="p">[</span><span class="n">X_train_rows</span><span class="o">.</span><span class="n">ravel</span><span class="p">()]</span>          <span class="c1"># what the corrections must explain</span>
+<span class="n">groups_train</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">obs</span><span class="p">[</span><span class="s2">"apparition"</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="n">train_idx</span><span class="p">]]</span> <span class="o">.</span><span class="n">tolist</span><span class="p">()</span> <span class="o">*</span> <span class="mi">2</span>
+<span class="n">X_train_rows</span><span class="o">.</span><span class="n">shape</span><span class="p">,</span> <span class="n">y_train</span><span class="o">.</span><span class="n">shape</span>
+</code></pre>
+<pre class="output">((2592, 1), (2592,))</pre>
+<p>Now we can chain the transformer and a linear regression in a pipeline, exactly like a preprocessing pipeline followed by a predictor:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.pipeline</span><span class="w"> </span><span class="kn">import</span> <span class="n">Pipeline</span>
+
+<span class="n">planet_x_model</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([</span>
+    <span class="p">(</span><span class="s2">"planet_x"</span><span class="p">,</span> <span class="n">PlanetXFeatures</span><span class="p">()),</span>
+    <span class="p">(</span><span class="s2">"lin_reg"</span><span class="p">,</span> <span class="n">LinearRegression</span><span class="p">(</span><span class="n">fit_intercept</span><span class="o">=</span><span class="kc">False</span><span class="p">)),</span>
+<span class="p">])</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">rms_score</span><span class="p">(</span><span class="n">estimator</span><span class="p">,</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">):</span>
+    <span class="k">return</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">((</span><span class="n">estimator</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span><span class="n">X</span><span class="p">)</span> <span class="o">-</span> <span class="n">y</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+</code></pre>
+
+<h3 id="grid">Grid Search</h3>
+<p>The distance and longitude of planet X are hyperparameters of the <code>planet_x</code> step, so <code>GridSearchCV</code> can explore them, with grouped cross-validation, just like any preprocessing option. The double-underscore syntax (<code>planet_x__a</code>) reaches inside the pipeline. We try 10 distances, including Bode's 38.8 AU, and 48 longitudes, for 480 candidate planets:</p>
+<pre class="code"><code><span class="kn">from</span><span class="w"> </span><span class="nn">sklearn.model_selection</span><span class="w"> </span><span class="kn">import</span> <span class="n">GridSearchCV</span>
+
+<span class="n">param_grid</span> <span class="o">=</span> <span class="p">{</span><span class="s2">"planet_x__a"</span><span class="p">:</span> <span class="p">[</span><span class="mf">20.0</span><span class="p">,</span> <span class="mf">24.0</span><span class="p">,</span> <span class="mf">26.0</span><span class="p">,</span> <span class="mf">28.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">,</span> <span class="mf">32.0</span><span class="p">,</span> <span class="mf">34.0</span><span class="p">,</span> <span class="mf">36.0</span><span class="p">,</span> <span class="mf">38.8</span><span class="p">,</span> <span class="mf">44.0</span><span class="p">],</span>
+              <span class="s2">"planet_x__lon0"</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">360.0</span><span class="p">,</span> <span class="mf">7.5</span><span class="p">))}</span>
+<span class="n">grid_search</span> <span class="o">=</span> <span class="n">GridSearchCV</span><span class="p">(</span><span class="n">planet_x_model</span><span class="p">,</span> <span class="n">param_grid</span><span class="p">,</span> <span class="n">cv</span><span class="o">=</span><span class="n">GroupKFold</span><span class="p">(</span><span class="mi">5</span><span class="p">),</span>
+                           <span class="n">scoring</span><span class="o">=</span><span class="n">rms_score</span><span class="p">,</span> <span class="n">n_jobs</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">grid_search</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train_rows</span><span class="p">,</span> <span class="n">y_train</span><span class="p">,</span> <span class="n">groups</span><span class="o">=</span><span class="n">groups_train</span><span class="p">)</span>
+<span class="n">grid_search</span><span class="o">.</span><span class="n">best_params_</span>
+</code></pre>
+<pre class="output">{&#x27;planet_x__a&#x27;: 30.0, &#x27;planet_x__lon0&#x27;: np.float64(150.0)}</pre>
+<p>The best candidate lies at 30 AU. Let's visualize the whole search (<a href="#fig-grid">Figure 3-3</a>):</p>
+<pre class="code"><code><span class="n">res</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">grid_search</span><span class="o">.</span><span class="n">cv_results_</span><span class="p">[</span><span class="s2">"params"</span><span class="p">])</span>
+<span class="n">res</span><span class="p">[</span><span class="s2">"rms"</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">grid_search</span><span class="o">.</span><span class="n">cv_results_</span><span class="p">[</span><span class="s2">"mean_test_score"</span><span class="p">]</span>
+<span class="n">table</span> <span class="o">=</span> <span class="n">res</span><span class="o">.</span><span class="n">pivot</span><span class="p">(</span><span class="n">index</span><span class="o">=</span><span class="s2">"planet_x__a"</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="s2">"planet_x__lon0"</span><span class="p">,</span> <span class="n">values</span><span class="o">=</span><span class="s2">"rms"</span><span class="p">)</span>
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mf">4.8</span><span class="p">))</span>
+<span class="n">im</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">values</span><span class="p">),</span> <span class="n">aspect</span><span class="o">=</span><span class="s2">"auto"</span><span class="p">,</span> <span class="n">origin</span><span class="o">=</span><span class="s2">"lower"</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="s2">"viridis_r"</span><span class="p">,</span>
+               <span class="n">extent</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="mf">3.75</span><span class="p">,</span> <span class="mf">356.25</span><span class="p">,</span> <span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_yticks</span><span class="p">(</span><span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">table</span><span class="p">)),</span> <span class="p">[</span><span class="sa">f</span><span class="s2">"</span><span class="si">{</span><span class="n">a</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2">"</span> <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">table</span><span class="o">.</span><span class="n">index</span><span class="p">])</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"longitude of planet X in 1765 (°)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"distance a (AU)"</span><span class="p">)</span>
+<span class="n">best</span> <span class="o">=</span> <span class="n">grid_search</span><span class="o">.</span><span class="n">best_params_</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">best</span><span class="p">[</span><span class="s2">"planet_x__lon0"</span><span class="p">],</span> <span class="nb">list</span><span class="p">(</span><span class="n">table</span><span class="o">.</span><span class="n">index</span><span class="p">)</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">best</span><span class="p">[</span><span class="s2">"planet_x__a"</span><span class="p">]),</span> <span class="s2">"r*"</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">18</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"log₁₀ cross-validated RMS O − C (arcsec)"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"planet_x_grid_search_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-grid"><img src="images/planet_x_grid_search_plot.png" alt="Grid search map"><figcaption><b>Figure 3-3.</b> Cross-validated RMS of every candidate planet X (yellow = better). The star marks the best one.</figcaption></figure>
+<p>The map has a clear yellow ridge. For each distance, only a narrow range of longitudes works, and the ridge bends: a more distant planet has to be placed further along. This is a <em>degeneracy</em>, like the mass–distance degeneracy of Chapter 2. A farther, heavier planet can produce a similar pull to a closer, lighter one, as long as it passes Uranus at the same time. But the ridge is not flat, and it has a minimum. Let's look at the best longitude for each distance, with its fitted mass:</p>
+<pre class="code"><code><span class="n">best_lon</span> <span class="o">=</span> <span class="n">table</span><span class="o">.</span><span class="n">idxmin</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="n">summary</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"best lon0"</span><span class="p">:</span> <span class="n">best_lon</span><span class="p">,</span> <span class="s2">"CV RMS (arcsec)"</span><span class="p">:</span> <span class="n">table</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)})</span>
+<span class="n">mass</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">lon</span> <span class="ow">in</span> <span class="n">best_lon</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([(</span><span class="s2">"planet_x"</span><span class="p">,</span> <span class="n">PlanetXFeatures</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">lon</span><span class="p">)),</span>
+                      <span class="p">(</span><span class="s2">"lin_reg"</span><span class="p">,</span> <span class="n">LinearRegression</span><span class="p">(</span><span class="n">fit_intercept</span><span class="o">=</span><span class="kc">False</span><span class="p">))])</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train_rows</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+    <span class="n">mass</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">model</span><span class="o">.</span><span class="n">named_steps</span><span class="p">[</span><span class="s2">"lin_reg"</span><span class="p">]</span><span class="o">.</span><span class="n">coef_</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="n">summary</span><span class="p">[</span><span class="s2">"mass (M_sun)"</span><span class="p">]</span> <span class="o">=</span> <span class="n">mass</span>
+<span class="n">summary</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>best lon0</th>
+      <th>CV RMS (arcsec)</th>
+      <th>mass (M_sun)</th>
+    </tr>
+    <tr>
+      <th>planet_x__a</th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>20.0</th>
+      <td>90.0</td>
+      <td>3.133968</td>
+      <td>0.000076</td>
+    </tr>
+    <tr>
+      <th>24.0</th>
+      <td>105.0</td>
+      <td>3.236599</td>
+      <td>0.000007</td>
+    </tr>
+    <tr>
+      <th>26.0</th>
+      <td>127.5</td>
+      <td>2.065724</td>
+      <td>0.000017</td>
+    </tr>
+    <tr>
+      <th>28.0</th>
+      <td>142.5</td>
+      <td>1.211502</td>
+      <td>0.000031</td>
+    </tr>
+    <tr>
+      <th>30.0</th>
+      <td>150.0</td>
+      <td>1.114820</td>
+      <td>0.000047</td>
+    </tr>
+    <tr>
+      <th>32.0</th>
+      <td>165.0</td>
+      <td>1.365740</td>
+      <td>0.000075</td>
+    </tr>
+    <tr>
+      <th>34.0</th>
+      <td>172.5</td>
+      <td>1.703193</td>
+      <td>0.000104</td>
+    </tr>
+    <tr>
+      <th>36.0</th>
+      <td>180.0</td>
+      <td>2.402134</td>
+      <td>0.000139</td>
+    </tr>
+    <tr>
+      <th>38.8</th>
+      <td>187.5</td>
+      <td>3.129870</td>
+      <td>0.000195</td>
+    </tr>
+    <tr>
+      <th>44.0</th>
+      <td>195.0</td>
+      <td>4.143225</td>
+      <td>0.000332</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>The cross-validated error is smallest at 30 AU (1.1″), and it gets much worse at Bode's 38.8 AU (3.1″). <b>The data overrule the prior.</b> The fitted mass also changes along the ridge, from about 6 Earth masses at 26 AU to more than 100 at 44 AU. Le Verrier, who assumed about 36 AU, found a planet that was too far and too massive, but in the right direction. You'll see why that is enough.</p>
+
+<h3 id="analyze">Analyze the Best Models and Their Errors</h3>
+<p>The linear model was an approximation. Let's refit the full non-linear simulator at the best distance, starting from the linear solution, with all eight remaining parameters free:</p>
+<pre class="code"><code><span class="c1"># Final model: full non-linear fit (no linearization) of Uranus's state and planet X's</span>
+<span class="c1"># mass and longitude, at the best distance found by the grid search.</span>
+<span class="n">A_X</span> <span class="o">=</span> <span class="n">best</span><span class="p">[</span><span class="s2">"planet_x__a"</span><span class="p">]</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">full_residuals</span><span class="p">(</span><span class="n">q</span><span class="p">,</span> <span class="n">data</span><span class="p">):</span>
+    <span class="n">state</span><span class="p">,</span> <span class="n">m</span><span class="p">,</span> <span class="n">lon0</span> <span class="o">=</span> <span class="n">q</span><span class="p">[:</span><span class="mi">6</span><span class="p">],</span> <span class="n">q</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">q</span><span class="p">[</span><span class="mi">7</span><span class="p">])</span>
+    <span class="n">bodies</span> <span class="o">=</span> <span class="n">bouvard</span><span class="o">.</span><span class="n">_bodies</span><span class="p">()</span> <span class="o">+</span> <span class="p">[(</span><span class="n">planet_x_position</span><span class="p">(</span><span class="n">A_X</span><span class="p">,</span> <span class="n">lon0</span><span class="p">),</span> <span class="n">m</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">o_minus_c</span><span class="p">(</span><span class="n">state</span><span class="p">,</span> <span class="n">bodies</span><span class="p">,</span> <span class="n">data</span><span class="p">)</span>
+
+<span class="n">lin</span> <span class="o">=</span> <span class="n">Pipeline</span><span class="p">([(</span><span class="s2">"planet_x"</span><span class="p">,</span> <span class="n">PlanetXFeatures</span><span class="p">(</span><span class="n">A_X</span><span class="p">,</span> <span class="n">best</span><span class="p">[</span><span class="s2">"planet_x__lon0"</span><span class="p">])),</span>
+                <span class="p">(</span><span class="s2">"lin_reg"</span><span class="p">,</span> <span class="n">LinearRegression</span><span class="p">(</span><span class="n">fit_intercept</span><span class="o">=</span><span class="kc">False</span><span class="p">))])</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X_train_rows</span><span class="p">,</span> <span class="n">y_train</span><span class="p">)</span>
+<span class="n">q0</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">bouvard</span><span class="o">.</span><span class="n">state_</span> <span class="o">+</span> <span class="n">lin</span><span class="o">.</span><span class="n">named_steps</span><span class="p">[</span><span class="s2">"lin_reg"</span><span class="p">]</span><span class="o">.</span><span class="n">coef_</span><span class="p">[:</span><span class="mi">6</span><span class="p">],</span>
+           <span class="n">lin</span><span class="o">.</span><span class="n">named_steps</span><span class="p">[</span><span class="s2">"lin_reg"</span><span class="p">]</span><span class="o">.</span><span class="n">coef_</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e5</span><span class="p">,</span> <span class="n">best</span><span class="p">[</span><span class="s2">"planet_x__lon0"</span><span class="p">]]</span>
+<span class="n">final</span> <span class="o">=</span> <span class="n">least_squares</span><span class="p">(</span><span class="n">full_residuals</span><span class="p">,</span> <span class="n">q0</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">train_set</span><span class="p">,),</span>
+                      <span class="n">x_scale</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">STATE_SCALE</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">],</span> <span class="n">diff_step</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">r_</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">(</span><span class="mi">6</span><span class="p">,</span> <span class="mf">1e-7</span><span class="p">),</span> <span class="mf">1e-3</span><span class="p">,</span> <span class="mf">1e-4</span><span class="p">])</span>
+<span class="n">x_mass</span><span class="p">,</span> <span class="n">x_lon0</span> <span class="o">=</span> <span class="n">final</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e-5</span><span class="p">,</span> <span class="n">final</span><span class="o">.</span><span class="n">x</span><span class="p">[</span><span class="mi">7</span><span class="p">]</span> <span class="o">%</span> <span class="mi">360</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"planet X: a = </span><span class="si">{</span><span class="n">A_X</span><span class="si">}</span><span class="s2"> AU, mass = </span><span class="si">{</span><span class="n">x_mass</span><span class="si">:</span><span class="s2">.3g</span><span class="si">}</span><span class="s2"> M_sun (</span><span class="si">{</span><span class="n">x_mass</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="mi">332946</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> Earth masses), "</span>
+      <span class="sa">f</span><span class="s2">"longitude in 1765 = </span><span class="si">{</span><span class="n">x_lon0</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"training RMS O-C: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">final</span><span class="o">.</span><span class="n">fun</span><span class="w"> </span><span class="o">**</span><span class="w"> </span><span class="mi">2</span><span class="p">))</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> arcsec "</span>
+      <span class="sa">f</span><span class="s2">"(was </span><span class="si">{</span><span class="o">-</span><span class="n">bouvard</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">train_set</span><span class="p">)</span><span class="si">:</span><span class="s2">.1f</span><span class="si">}</span><span class="s2"> without planet X)"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">planet X: a = 30.0 AU, mass = 4.84e-05 M_sun (16.1 Earth masses), longitude in 1765 = 152.7°
+training RMS O-C: 0.54 arcsec (was 12.4 without planet X)</pre>
+<p>The RMS drops from 12.4″ to about half an arcsecond. Planet X has about 16 Earth masses. Let's compare the residuals with and without it (<a href="#fig-before-after">Figure 3-4</a>):</p>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">axes</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="mi">7</span><span class="p">),</span> <span class="n">sharex</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="n">r_before</span> <span class="o">=</span> <span class="n">bouvard</span><span class="o">.</span><span class="n">residuals</span><span class="p">(</span><span class="n">obs</span><span class="p">)</span>
+<span class="n">r_after</span> <span class="o">=</span> <span class="n">full_residuals</span><span class="p">(</span><span class="n">final</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">obs</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">ax</span><span class="p">,</span> <span class="n">r</span><span class="p">,</span> <span class="n">title</span> <span class="ow">in</span> <span class="p">[(</span><span class="n">axes</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">r_before</span><span class="p">,</span> <span class="s2">"Sun + Jupiter + Saturn"</span><span class="p">),</span>
+                     <span class="p">(</span><span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">r_after</span><span class="p">,</span> <span class="sa">f</span><span class="s2">"… + planet X at </span><span class="si">{</span><span class="n">A_X</span><span class="si">:</span><span class="s2">g</span><span class="si">}</span><span class="s2"> AU"</span><span class="p">)]:</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">"year"</span><span class="p">],</span> <span class="n">r</span><span class="p">[:</span><span class="n">n_obs</span><span class="p">],</span> <span class="s2">"."</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"longitude"</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">obs</span><span class="p">[</span><span class="s2">"year"</span><span class="p">],</span> <span class="n">r</span><span class="p">[</span><span class="n">n_obs</span><span class="p">:],</span> <span class="s2">"."</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"latitude"</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">axhline</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"k"</span><span class="p">,</span> <span class="n">lw</span><span class="o">=</span><span class="mf">0.8</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">title</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"O − C (arcsec)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"upper left"</span><span class="p">)</span>
+<span class="n">axes</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"year"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"o_minus_c_before_after_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-before-after"><img src="images/o_minus_c_before_after_plot.png" alt="O - C before and after adding planet X"><figcaption><b>Figure 3-4.</b> Residuals of Uranus without (top) and with (bottom) planet X. Note the different vertical scales.</figcaption></figure>
+<p>The two-arcminute waves are gone. What remains is about one arcsecond of smooth structure, mostly in latitude. Our planet X lies exactly in the ecliptic and on a circle, while the real one is tilted by about 1.8° and slightly eccentric. With 1840s observations, which had errors of one to a few arcseconds, those leftovers would be invisible.</p>
+
+<h3 id="test">Evaluate Your System on the Test Set</h3>
+<pre class="code"><code><span class="n">rms_before</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">bouvard</span><span class="o">.</span><span class="n">residuals</span><span class="p">(</span><span class="n">test_set</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">rms_after</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">full_residuals</span><span class="p">(</span><span class="n">final</span><span class="o">.</span><span class="n">x</span><span class="p">,</span> <span class="n">test_set</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"test RMS O-C without planet X: </span><span class="si">{</span><span class="n">rms_before</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> arcsec"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"test RMS O-C with planet X:    </span><span class="si">{</span><span class="n">rms_after</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2"> arcsec"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">test RMS O-C without planet X: 12.81 arcsec
+test RMS O-C with planet X:    0.56 arcsec</pre>
+<p>On the held-out seasons, adding planet X cuts the error by a factor of more than 20. It generalizes. We are ready to tell the world.</p>
+
+<h2 id="present">Present Your Solution</h2>
+<p>Your report to the Academy: the motion of Uranus, including the pre-discovery positions that Bouvard rejected, is explained to the precision of the observations by Newtonian gravity plus one more planet. That planet has about 16 Earth masses and orbits at about 30 AU, much closer than Bode's law suggested. The data do not pin down the distance perfectly (Figure 3-3), but they do pin down <em>where in the sky the planet is now</em>.</p>
+<p>That last point deserves a moment. In 1846 the planet had passed Uranus only about 25 years earlier. Every candidate on the ridge of Figure 3-3 was constrained to be near the same place at the time of that closest approach, so they all point to roughly the same part of the sky in the 1840s, even though their distances differ. The direction of a planet near its closest approach is the best-determined quantity in the whole problem. That is why Le Verrier could be quite wrong about the distance and still right about where to look.</p>
+
+<h2 id="launch">Launch: Point the Telescope</h2>
+<p>On 18 September 1846, Le Verrier wrote to Johann Galle at the Berlin Observatory with his prediction. Galle received the letter on the 23rd and looked that same night, with the student Heinrich d'Arrest, who suggested comparing the field with a new star chart. Let's make our own prediction for that night:</p>
+<pre class="code"><code><span class="n">JD_GALLE</span> <span class="o">=</span> <span class="mf">2395197.5</span>            <span class="c1"># 23 September 1846, the night of the discovery</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">geocentric_radec</span><span class="p">(</span><span class="n">helio_xyz</span><span class="p">,</span> <span class="n">jd</span><span class="p">):</span>
+    <span class="n">g</span> <span class="o">=</span> <span class="n">helio_xyz</span> <span class="o">-</span> <span class="n">earth_pos</span><span class="p">(</span><span class="n">jd</span><span class="p">)</span>
+    <span class="n">c</span><span class="p">,</span> <span class="n">s</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">EPS_J2000</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">EPS_J2000</span><span class="p">)</span>
+    <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span> <span class="o">=</span> <span class="n">g</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">s</span> <span class="o">*</span> <span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">s</span> <span class="o">*</span> <span class="n">g</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">+</span> <span class="n">c</span> <span class="o">*</span> <span class="n">g</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>       <span class="c1"># ecliptic -&gt; equatorial</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">x</span><span class="p">))</span> <span class="o">%</span> <span class="mi">360</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arcsin</span><span class="p">(</span><span class="n">z</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">g</span><span class="p">)))</span>
+
+<span class="n">x_pos_1846</span> <span class="o">=</span> <span class="n">planet_x_position</span><span class="p">(</span><span class="n">A_X</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">x_lon0</span><span class="p">))(</span><span class="n">JD_GALLE</span><span class="p">)</span>
+<span class="n">pred_ra</span><span class="p">,</span> <span class="n">pred_dec</span> <span class="o">=</span> <span class="n">geocentric_radec</span><span class="p">(</span><span class="n">x_pos_1846</span><span class="p">,</span> <span class="n">JD_GALLE</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"predicted position of planet X on 1846-09-23: RA = </span><span class="si">{</span><span class="n">pred_ra</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°, Dec = </span><span class="si">{</span><span class="n">pred_dec</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"heliocentric longitude: </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">x_pos_1846</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span><span class="w"> </span><span class="n">x_pos_1846</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="mi">360</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">predicted position of planet X on 1846-09-23: RA = 328.98°, Dec = -12.60°
+heliocentric longitude: 327.86°</pre>
+<p>Now, and only now, let's open the sealed envelope and ask NASA where Neptune really was:</p>
+<pre class="code"><code><span class="n">neptune_sky</span> <span class="o">=</span> <span class="n">fetch_observations</span><span class="p">(</span><span class="s2">"8"</span><span class="p">,</span> <span class="s2">"neptune_1846"</span><span class="p">,</span> <span class="s2">"1846-09-23"</span><span class="p">,</span> <span class="s2">"1846-09-24"</span><span class="p">,</span> <span class="s2">"1d"</span><span class="p">)</span>
+<span class="n">nep_ra</span><span class="p">,</span> <span class="n">nep_dec</span> <span class="o">=</span> <span class="n">neptune_sky</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">[</span><span class="s2">"ra"</span><span class="p">,</span> <span class="s2">"dec"</span><span class="p">]]</span>
+<span class="n">cos_sep</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">pred_dec</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">nep_dec</span><span class="p">))</span> <span class="o">+</span>
+           <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">pred_dec</span><span class="p">))</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">nep_dec</span><span class="p">))</span> <span class="o">*</span>
+           <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="n">pred_ra</span> <span class="o">-</span> <span class="n">nep_ra</span><span class="p">)))</span>
+<span class="n">separation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="n">cos_sep</span><span class="p">))</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Neptune (NASA/JPL) on 1846-09-23: RA = </span><span class="si">{</span><span class="n">nep_ra</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°, Dec = </span><span class="si">{</span><span class="n">nep_dec</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"distance between our prediction and Neptune: </span><span class="si">{</span><span class="n">separation</span><span class="si">:</span><span class="s2">.2f</span><span class="si">}</span><span class="s2">°"</span><span class="p">)</span>
+</code></pre>
+<pre class="output">Neptune (NASA/JPL) on 1846-09-23: RA = 330.40°, Dec = -12.67°
+distance between our prediction and Neptune: 1.39°</pre>
+<pre class="code"><code><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">7</span><span class="p">,</span> <span class="mi">7</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">pred_ra</span><span class="p">,</span> <span class="n">pred_dec</span><span class="p">,</span> <span class="s2">"r+"</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">22</span><span class="p">,</span> <span class="n">mew</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"our prediction"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">nep_ra</span><span class="p">,</span> <span class="n">nep_dec</span><span class="p">,</span> <span class="s2">"o"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"tab:blue"</span><span class="p">,</span> <span class="n">ms</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s2">"Neptune (NASA/JPL)"</span><span class="p">)</span>
+<span class="k">for</span> <span class="n">radius</span><span class="p">,</span> <span class="n">ls</span> <span class="ow">in</span> <span class="p">[(</span><span class="mi">1</span><span class="p">,</span> <span class="s2">"-"</span><span class="p">),</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="s2">"--"</span><span class="p">)]:</span>
+    <span class="n">circle</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">Circle</span><span class="p">((</span><span class="n">pred_ra</span><span class="p">,</span> <span class="n">pred_dec</span><span class="p">),</span> <span class="n">radius</span><span class="p">,</span> <span class="n">fill</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">ls</span><span class="o">=</span><span class="n">ls</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"r"</span><span class="p">,</span> <span class="n">alpha</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">add_patch</span><span class="p">(</span><span class="n">circle</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">text</span><span class="p">(</span><span class="n">pred_ra</span> <span class="o">-</span> <span class="mf">1.05</span><span class="p">,</span> <span class="n">pred_dec</span> <span class="o">+</span> <span class="mf">0.75</span><span class="p">,</span> <span class="s2">"1°"</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">"r"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlim</span><span class="p">(</span><span class="n">pred_ra</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="n">pred_ra</span> <span class="o">-</span> <span class="mi">4</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylim</span><span class="p">(</span><span class="n">pred_dec</span> <span class="o">-</span> <span class="mi">4</span><span class="p">,</span> <span class="n">pred_dec</span> <span class="o">+</span> <span class="mi">4</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_aspect</span><span class="p">(</span><span class="s2">"equal"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">grid</span><span class="p">(</span><span class="n">alpha</span><span class="o">=</span><span class="mf">0.3</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span><span class="o">=</span><span class="s2">"lower left"</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">"right ascension (°)"</span><span class="p">);</span> <span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">"declination (°)"</span><span class="p">)</span>
+<span class="n">save_fig</span><span class="p">(</span><span class="s2">"galle_search_plot"</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</code></pre>
+<figure id="fig-galle"><img src="images/galle_search_plot.png" alt="Our prediction versus Neptune"><figcaption><b>Figure 3-5.</b> The sky on 23 September 1846: our prediction (cross, with 1° and 2° circles) and the true position of Neptune (blue)</figcaption></figure>
+<p>Our prediction lands about 1.4° from Neptune, less than three widths of the full Moon, in a sky that is 360° around. A telescope sweeping that region with a good star chart would find a "star" not on the chart within a night. That's exactly what happened in Berlin: Galle and d'Arrest found Neptune within an hour, about 1° from Le Verrier's predicted position. Here is how our planet X compares with the real Neptune:</p>
+<pre class="code"><code><span class="n">neptune_vec</span> <span class="o">=</span> <span class="n">fetch_vectors</span><span class="p">(</span><span class="s2">"8"</span><span class="p">,</span> <span class="s2">"neptune"</span><span class="p">)</span>
+<span class="n">nep_xyz</span> <span class="o">=</span> <span class="n">spline</span><span class="p">(</span><span class="n">neptune_vec</span><span class="p">)(</span><span class="n">JD_GALLE</span><span class="p">)</span>
+<span class="n">true_lon</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">nep_xyz</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">nep_xyz</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">%</span> <span class="mi">360</span>
+<span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s2">"our planet X"</span><span class="p">:</span> <span class="p">[</span><span class="n">A_X</span><span class="p">,</span> <span class="n">x_mass</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">degrees</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arctan2</span><span class="p">(</span><span class="n">x_pos_1846</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">x_pos_1846</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="o">%</span> <span class="mi">360</span><span class="p">],</span>
+              <span class="s2">"Neptune (NASA)"</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">nep_xyz</span><span class="p">),</span> <span class="mi">1</span> <span class="o">/</span> <span class="mf">19412.26</span><span class="p">,</span> <span class="n">true_lon</span><span class="p">]},</span>
+             <span class="n">index</span><span class="o">=</span><span class="p">[</span><span class="s2">"distance in 1846 (AU)"</span><span class="p">,</span> <span class="s2">"mass (M_sun)"</span><span class="p">,</span> <span class="s2">"heliocentric longitude 1846 (°)"</span><span class="p">])</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">6</span><span class="p">)</span>
+</code></pre>
+<div class="dataframe-wrap"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th>our planet X</th>
+      <th>Neptune (NASA)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>distance in 1846 (AU)</th>
+      <td>30.000000</td>
+      <td>30.023592</td>
+    </tr>
+    <tr>
+      <th>mass (M_sun)</th>
+      <td>0.000048</td>
+      <td>0.000052</td>
+    </tr>
+    <tr>
+      <th>heliocentric longitude 1846 (°)</th>
+      <td>327.858903</td>
+      <td>326.904688</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p>Our distance (30 AU) and our heliocentric longitude (within about 1°) are excellent, and the mass is within 6% of Neptune's. That is the best our model class can do. It has one more advantage than Le Verrier had: noise-free data. Le Verrier's own distance was too large (by about 20%) and his mass too high, because the 1840s observations could not resolve the degeneracy that Figure 3-3 shows. His direction was still right.</p>
+
+<h2 id="monitor">Monitor and Maintain</h2>
+<p>A model in production must be watched, and the story of planet hunting is full of lessons about it:</p>
+<ul>
+<li><b>Concept drift, Newton edition.</b> Le Verrier immediately applied the same method to Mercury, whose perihelion advanced 43″ per century more than Newton predicted. He proposed a planet "Vulcan" inside Mercury's orbit. It was never found. The residual was real, but the cause was not a missing input: the <em>model class</em> was wrong. In 1915, Einstein's general relativity explained exactly 43″ per century. Sometimes the fix for structured residuals is a hidden variable (Neptune). Sometimes it is a new theory (relativity). You saw the same thing with S2 in Chapter 2.</li>
+<li><b>Overfitting the residuals.</b> Around 1900, Percival Lowell analyzed the small residuals that remained in the motion of Uranus and predicted a "Planet X" beyond Neptune. Pluto was found in 1930 near his predicted position, but it was a coincidence: Pluto is far too light to perturb Uranus. The residuals came from a slightly wrong mass for Neptune, fixed when Voyager 2 flew by in 1989. When you fit a model to residuals that are at the level of the noise and the systematics, you will find a "signal" whether or not one exists.</li>
+<li><b>The search continues.</b> Today, astronomers look for a hypothetical "Planet Nine" from the clustering of the orbits of distant trans-Neptunian objects. It's the same kind of inference, with the same risks and the same rewards.</li>
+</ul>
+
+<h2 id="try">Try It Out!</h2>
+<p>The animation below runs on the simulated orbits and fitted parameters of this chapter. Watch Neptune pull Uranus ahead and then hold it back, with the residual curve drawn in real time. Click any cell of the grid search to see where that candidate planet would have been in 1846. Then relive the night of 23 September 1846 at the eyepiece. Full screen: <a href="animations/neptune_animation.html">animations/neptune_animation.html</a>.</p>
+<iframe class="anim" src="animations/neptune_animation.html" title="Neptune animation" loading="lazy"></iframe>
+
+<h2 id="exercises">Exercises</h2>
+<ol class="exercise">
+<li>Add Gaussian noise of 2″ to the post-1781 positions and 15″ to the pre-discovery ones (a realistic 1840s situation), weight the residuals accordingly, and redo the grid search. How wide does the ridge in Figure 3-3 become? How far off is the prediction for 1846?</li>
+<li>Remove the pre-discovery positions, as Bouvard did. Can the grid search still find the planet? Compare the maps. (Hint: with only 65 years of data, distance, mass and longitude trade off against each other almost perfectly.)</li>
+<li>Give planet X an eccentricity and a perihelion longitude, and fit them in the non-linear refinement. Does the distance move toward 30.1 AU?</li>
+<li>Use only the data up to 1840 and predict Neptune's position for 1846. How much does the early warning cost in accuracy?</li>
+<li>Repeat the whole project for Neptune, using Horizons data from 1846 to 1930, and look for "Planet X" in its residuals. What do you find, and what does that teach you about Lowell's search?</li>
+<li>Replace the grid search with <code>RandomizedSearchCV</code> over continuous distributions for <code>planet_x__a</code> and <code>planet_x__lon0</code>. How many iterations do you need to find the ridge?</li>
+</ol>
+
+<hr class="end">
+<div class="footnotes">
+<p id="fn1"><a href="#r1">1</a> Urbain Le Verrier (1811–1877) did exactly this, starting in the summer of 1845 at Arago's suggestion. He presented his prediction to the French Academy of Sciences on 31 August 1846. John Couch Adams in Cambridge had independently computed a similar prediction, but no search was organized in time.</p>
+<p><b>Data credits.</b> NASA/JPL Horizons (Jet Propulsion Laboratory, California Institute of Technology), planetary ephemeris DE440/DE441. Planetary masses: IAU/JPL values.</p>
+</div>
+</main>
+</div>
+</body>
+</html>

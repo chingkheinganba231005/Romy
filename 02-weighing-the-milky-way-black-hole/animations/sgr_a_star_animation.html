@@ -259,7 +259,7 @@ document.getElementById('tabs').onclick = ev => {
   sides[tab]();
 };
 function frame(now) {
-  const dt = Math.min(now - last, 60) / 1000; last = now;
+  const dt = Math.max(0, Math.min(now - last, 60)) / 1000; last = now;
   if (playing && tab !== 'weigh') {
     // slow down near pericentre so the swing is visible
     const o = orbit(S2, t, S2.R0), slow = tab === 'cluster' ? 1 : Math.min(1, Math.max(0.06, o.r / (S2.a * 0.6)));
