@@ -9,6 +9,7 @@ End-to-end Machine Learning projects, each written as a book chapter in the styl
 | [3](03-rediscovering-neptune/) | **Rediscovering Neptune from the motion of Uranus** | NASA/JPL Horizons positions of Uranus (1690–1846), Earth, Jupiter and Saturn |
 | [4](04-discovering-dark-energy/) | **Discovering dark energy: the accelerating Universe** | Pantheon+ Type Ia supernovae with SH0ES Cepheid calibrators |
 | [5](05-hunting-exoplanets/) | **Hunting exoplanets in NASA Kepler data** | Kepler-90 light curves (MAST) and the Kepler KOI catalog (NASA Exoplanet Archive) |
+| [6](06-pacemaker-of-the-ice-ages/) | **The pacemaker of the ice ages** | EPICA Dome C ice core, Antarctic CO₂, LR04 deep-sea stack, La2004 orbital solution |
 
 Every chapter folder contains:
 

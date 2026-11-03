@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Astronomy × Machine Learning</title>
-<meta name="description" content="Three end-to-end machine learning projects with real astronomical data: rediscover Kepler's laws, weigh the Milky Way's black hole, and rediscover Neptune.">
+<meta name="description" content="End-to-end machine learning projects with real data: Kepler's laws, the Milky Way's black hole, Neptune, dark energy, exoplanets and the ice ages.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;600&family=Source+Sans+3:wght@300;400;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
@@ -116,7 +116,7 @@ footer { border-top: 2px solid var(--fg); margin: 64px 0 0; padding: 14px 0 50px
   <div class="series">Astronomy × Machine Learning</div>
   <h1>Rediscovering the Universe<br>with Real Data</h1>
   <p class="subtitle">End-to-end Machine Learning projects, written as book chapters, that rediscover landmark results of astronomy from real observations.</p>
-  <p class="lede">Each chapter follows the classic end-to-end project recipe of <i>Hands-On Machine Learning with Scikit-Learn and TensorFlow</i>, step by step. It explains the astronomy and the Machine Learning from scratch, shows every line of code with its real output, and ends with a "Try it out!" animation you can use in class.</p>
+  <p class="lede">Each of the six chapters follows the classic end-to-end project recipe of <i>Hands-On Machine Learning with Scikit-Learn and TensorFlow</i>, step by step. It explains the astronomy and the Machine Learning from scratch, shows every line of code with its real output, and ends with a "Try it out!" animation you can use in class.</p>
   <ol class="steps">
     <li>Look at the big picture</li><li>Get the data</li><li>Discover and visualize</li><li>Prepare the data</li>
     <li>Select and train a model</li><li>Fine-tune</li><li>Present</li><li>Launch, monitor, maintain</li>
@@ -217,6 +217,25 @@ footer { border-top: 2px solid var(--fg); margin: 64px 0 0; padding: 14px 0 50px
       <a class="btn" href="05-hunting-exoplanets/animations/exoplanet_animation.html">Animation</a>
       <a class="btn" href="05-hunting-exoplanets/exoplanet_project.ipynb">Notebook</a>
       <a class="btn" href="05-hunting-exoplanets/README.md">README</a>
+    </div>
+  </div>
+</article>
+
+<article class="chapter">
+  <a class="thumb" href="06-pacemaker-of-the-ice-ages/index.html"><img src="06-pacemaker-of-the-ice-ages/images/model_fit_plot.png" alt="Ice-sheet model against 800,000 years of Antarctic temperature" loading="lazy"></a>
+  <div class="body">
+    <div class="chap-num">Chapter <span>6</span></div>
+    <h3><a href="06-pacemaker-of-the-ice-ages/index.html">The Pacemaker of the Ice Ages</a></h3>
+    <p class="tagline">800,000 years of Antarctic ice. Are the ice ages driven by the Earth's orbit?</p>
+    <div class="badges"><span class="badge">real measurements</span><span class="badge nasa">orbital solution</span>
+      <span class="badge ml">time-series split</span><span class="badge ml">lag features</span><span class="badge ml">blocked CV</span><span class="badge ml">RandomizedSearchCV</span></div>
+    <p>Find the orbit's 41,000- and 100,000-year rhythms in the ice core, compute northern summer sunshine from orbital physics, and tune a non-differentiable ice-sheet model with randomized search. Then forecast the next ice age, and watch for drift.</p>
+    <div class="result">Driven by the orbit alone, the tuned model ends the ice ages at the right times: <b>every termination of the last 800,000 years within 2–21 thousand years</b>. Today's <b>420 ppm of CO₂</b> lies far outside the training range of 174–299 ppm.</div>
+    <div class="links">
+      <a class="btn primary" href="06-pacemaker-of-the-ice-ages/index.html">Read the chapter</a>
+      <a class="btn" href="06-pacemaker-of-the-ice-ages/animations/ice_ages_animation.html">Animation</a>
+      <a class="btn" href="06-pacemaker-of-the-ice-ages/ice_ages_project.ipynb">Notebook</a>
+      <a class="btn" href="06-pacemaker-of-the-ice-ages/README.md">README</a>
     </div>
   </div>
 </article>
